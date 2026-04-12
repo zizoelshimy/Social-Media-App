@@ -12,6 +12,7 @@ exports.login = {
 exports.signup = {
     body: exports.login.body.safeExtend({
         username: validation_1.generalValidationFields.username,
+        phone: validation_1.generalValidationFields.phone.optional(),
         confirmPassword: validation_1.generalValidationFields.confirmPassword
     }).refine((data) => {
         return data.password === data.confirmPassword;

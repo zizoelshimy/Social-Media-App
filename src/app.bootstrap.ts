@@ -4,6 +4,7 @@ import { authRouter } from "./modules";
 import { globalErrorHandler } from "./middleware";
 import { PORT } from "./config/config";
 import connectDB from "./DB/connection.db";
+import redisService from "./common/services/redis.service";
  const bootstrap=async ():Promise<void>=>{
     const app:express.Express=express();
     app.use(express.json())
@@ -17,6 +18,7 @@ import connectDB from "./DB/connection.db";
     })
     //connecting the database
     await connectDB()
+    await redisService.connect()
     //application-error
     app.use(globalErrorHandler)
      app.listen(PORT,()=>{

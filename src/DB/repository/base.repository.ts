@@ -8,6 +8,7 @@ import {
   ProjectionType,
   QueryFilter,
   QueryOptions,
+  ReturnsNewDoc,
   Types,
   UpdateQuery,
   UpdateResult,
@@ -71,7 +72,7 @@ export abstract class DataBaseRepository<TRawDoc> {
     projection?: ProjectionType<TRawDoc> | null | undefined;
     options?: (QueryOptions<TRawDoc> & { lean: true }) | null | undefined;
   }): Promise<null | FlattenMaps<IUser>>; //why flatten maps because we want to remove the _id and __v from the output &what is lean because we want to return a plain js object instead of a mongoose document
-
+//what is HydratedDocument because we want to return a mongoose document that has all the methods of a mongoose document and what is raw doc because we want to return a plain js object that has all the properties of a mongoose document but without the methods of a mongoose document
   //implementation of findOne
   async findOne({
     filter,
@@ -136,6 +137,30 @@ async updateOne({
     return await this.model.updateOne(filter , update , options)
 }
 
+async findOneAndUpdate({
+    filter,
+    update,
+    options ={new: true}
+}: {
+    filter: QueryFilter<TRawDoc>,
+    update: UpdateQuery<TRawDoc>,
+    options: QueryOptions<TRawDoc> &ReturnsNewDoc
+}):Promise<HydratedDocument<TRawDoc> | null> {
+    return await this.model.findByIdAndUpdate(filter , update , options)
+}
+
+async findByIdAndUpdate({
+    _id,
+    update,
+    options ={new: true}
+}: {
+    _id: Types.ObjectId,
+    update: UpdateQuery<TRawDoc>,
+    options: QueryOptions<TRawDoc> &ReturnsNewDoc
+}):Promise<HydratedDocument<TRawDoc> | null> {
+    return await this.model.findByIdAndUpdate(_id , update , options)
+}
+
 async updateMany({
     filter,
     update,
@@ -164,5 +189,24 @@ async deleteMany({
     filter: QueryFilter<TRawDoc>,
 }):Promise<DeleteResult> {
     return await this.model.deleteMany(filter)
+}
+
+async findOneAndDelete({
+    filter,
+}: {
+    filter: QueryFilter<TRawDoc>,
+    update: UpdateQuery<TRawDoc>,
+    options: QueryOptions<TRawDoc> &ReturnsNewDoc
+}):Promise<HydratedDocument<TRawDoc> | null> {
+    return await this.model.findByIdAndDelete(filter)
+}
+async findByIdAndDelete({
+    _id,
+}: {
+    _id: Types.ObjectId, 
+    update: UpdateQuery<TRawDoc>,
+    options: QueryOptions<TRawDoc> &ReturnsNewDoc
+}):Promise<HydratedDocument<TRawDoc> | null> {
+    return await this.model.findByIdAndDelete(_id)
 }
 }
