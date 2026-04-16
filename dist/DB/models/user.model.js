@@ -17,7 +17,7 @@ const userSchema = new mongoose_1.Schema({
     profileCoverPictures: { type: [String] },
     gender: { type: Number, enum: enums_1.GenderEnum, default: enums_1.GenderEnum.MALE },
     role: { type: Number, enum: enums_1.RoleEnum, default: enums_1.RoleEnum.USER },
-    provider: { type: Number, enum: enums_1.ProviderEnum, default: enums_1.ProviderEnum.GOOGLE },
+    provider: { type: Number, enum: enums_1.ProviderEnum, default: enums_1.ProviderEnum.SYSTEM },
     changeCredentialsTime: { type: Date },
     DOB: { type: Date },
     confirmEmail: { type: Date },

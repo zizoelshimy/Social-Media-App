@@ -19,7 +19,7 @@ firstName: { type: String, required: true },
 
     gender: { type: Number, enum: GenderEnum, default: GenderEnum.MALE },
     role: { type: Number, enum: RoleEnum, default: RoleEnum.USER },
-    provider: { type: Number, enum: ProviderEnum, default: ProviderEnum.GOOGLE },
+    provider: { type: Number, enum: ProviderEnum, default: ProviderEnum.SYSTEM },
 
     changeCredentialsTime: { type: Date },
     DOB: { type: Date },

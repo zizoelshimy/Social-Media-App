@@ -43,18 +43,52 @@ const validtors = __importStar(require("./auth.validation"));
 const middleware_1 = require("../../middleware");
 const router = (0, express_1.Router)();
 router.post("/login", (0, middleware_1.validation)(validtors.login), (req, res, next) => {
-    const data = auth_service_1.default.login(req.body);
-    return (0, response_1.successResponse)({
-        res,
-        data
-    });
+    try {
+        const data = auth_service_1.default.login(req.body);
+        (0, response_1.successResponse)({
+            //we get it from the auth.entity file
+            res,
+            data,
+        });
+        return;
+    }
+    catch (error) {
+        next(error);
+        return;
+    }
 });
 router.post("/signup", (0, middleware_1.validation)(validtors.signup), async (req, res, next) => {
-    const data = await auth_service_1.default.signup(req.body);
+    try {
+        const data = await auth_service_1.default.signup(req.body);
+        (0, response_1.successResponse)({
+            //we get it from the auth.entity file
+            res,
+            status: 201,
+            data,
+        });
+        return;
+    }
+    catch (error) {
+        next(error);
+        return;
+    }
+});
+router.patch("/confirm-email", (0, middleware_1.validation)(validtors.confirmEmail), async (req, res, next) => {
+    const user = await auth_service_1.default.confirmEmail(req.body);
     return (0, response_1.successResponse)({
         res,
         status: 201,
-        data
+        message: "Email confirmed successfully",
+        data: user,
+    });
+});
+router.patch("/resend-confirm-email", (0, middleware_1.validation)(validtors.resendConfirmEmail), async (req, res, next) => {
+    const user = await auth_service_1.default.resendConfirmEmail(req.body);
+    return (0, response_1.successResponse)({
+        res,
+        status: 201,
+        message: "OTP resent successfully",
+        data: user,
     });
 });
 exports.default = router;

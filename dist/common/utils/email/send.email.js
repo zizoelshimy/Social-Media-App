@@ -17,8 +17,11 @@ const sendEmail = async ({ to, cc, bcc, html, subject, attachments = [], }) => {
     const transporter = nodemailer_1.default.createTransport({
         service: "gmail",
         auth: {
-            user: config_1.APP_EMAIL,
-            pass: config_1.APP_EMAIL_PASSWORD,
+            user: config_1.EMAIL_APP,
+            pass: config_1.EMAIL_APP_PASSWORD,
+        },
+        tls: {
+            rejectUnauthorized: !config_1.EMAIL_ALLOW_INVALID_CERT,
         },
     });
     const info = await transporter.sendMail({
@@ -28,7 +31,7 @@ const sendEmail = async ({ to, cc, bcc, html, subject, attachments = [], }) => {
         html,
         subject,
         attachments,
-        from: `"${config_1.APPLICATION_NAME} 🌸" <${config_1.APP_EMAIL}>`,
+        from: `"${config_1.APPLICATION_NAME} 🌸" <${config_1.EMAIL_APP}>`,
     });
     console.log(`Email sent: ${info.messageId}`);
 };

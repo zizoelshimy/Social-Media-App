@@ -1,30 +1,75 @@
-import { Router,Request ,Response,NextFunction} from "express";
-import  authServise from "./auth.service";
+import { Router, Request, Response, NextFunction } from "express";
+import authServise from "./auth.service";
 import { successResponse } from "../../common/response";
 import { ILoginResponse } from "./auth.entity";
 import * as validtors from "./auth.validation";
 import { validation } from "../../middleware";
 const router: Router = Router();
 
-router.post("/login",
-    validation(validtors.login),
-     (req:Request, res:Response,next:NextFunction):Response => {
-    
-    const data=authServise.login(req.body)
-    return successResponse<ILoginResponse>({ //we get it from the auth.entity file
-        res, 
-        data
-    })
-})
-
-router.post("/signup",
-    validation(validtors.signup),
-     async(req:Request, res:Response,next:NextFunction):Promise<Response> => {
-    const data=await authServise.signup(req.body)
-    return successResponse<any>({ //we get it from the auth.entity file
+router.post(
+  "/login",
+  validation(validtors.login),
+  (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const data = authServise.login(req.body);
+      successResponse<ILoginResponse>({
+        //we get it from the auth.entity file
         res,
-        status:201,
-        data
-    })
-})
+        data,
+      });
+      return;
+    } catch (error) {
+      next(error);
+      return;
+    }
+  },
+);
+
+router.post(
+  "/signup",
+  validation(validtors.signup),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await authServise.signup(req.body);
+      successResponse<any>({
+        //we get it from the auth.entity file
+        res,
+        status: 201,
+        data,
+      });
+      return;
+    } catch (error) {
+      next(error);
+      return;
+    }
+  },
+);
+
+router.patch(
+  "/confirm-email",
+  validation(validtors.confirmEmail),
+  async (req, res, next) => {
+    const user = await authServise.confirmEmail(req.body);
+    return successResponse({
+      res,
+      status: 201,
+      message: "Email confirmed successfully",
+      data: user,
+    });
+  },
+);
+
+router.patch(
+  "/resend-confirm-email",
+  validation(validtors.resendConfirmEmail),
+  async (req, res, next) => {
+    const user = await authServise.resendConfirmEmail(req.body);
+    return successResponse({
+      res,
+      status: 201,
+      message: "OTP resent successfully",
+      data: user,
+    });
+  },
+);
 export default router;
