@@ -13,16 +13,35 @@ import redisService from "../../common/services/redis.service";
 import { EmailEnum, ProviderEnum } from "../../common/enums";
 import { createRandomOtp } from "../../common/utils/otp";
 import { compareHash } from "../../common/utils/security";
+import { TokenService } from "../../common/services/token.servic";
 export class AuthenticationService {
   private userRepository: UserRepository;
   private readonly redis: RedisService;
+  private readonly tokenService: TokenService;
   constructor() {
     this.userRepository = new UserRepository();
     this.redis = redisService;
+    this.tokenService = new TokenService();
   }
-  public login(data: LoginDto): LoginDto {
-    return data;
+public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: string; refresh_token: string }> { {
+  const { email, password } = inputs;
+  const user = await this.userRepository.findOne({
+    filter: { email, provider: ProviderEnum.SYSTEM ,confirmEmail: { $exists: true, $ne: null } },
+  });
+  if (!user) {
+    throw new NotFoundException("Invalid email or password");
   }
+  if (
+    !(await compareHash({
+      plaintext: password,
+      ciphertext: user.password
+    }))
+  ) {
+    throw new NotFoundException("Invalid email or password");
+  }
+  return await this.tokenService.createLoginCredentials(user, issuer);
+};
+}
   // the in to db is raw data and the out data is hydrated wit recpect to the service and the out to front is raw data to can not update it
 
   private async sendEmailOtp({

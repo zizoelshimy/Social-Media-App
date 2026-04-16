@@ -42,20 +42,9 @@ const response_1 = require("../../common/response");
 const validtors = __importStar(require("./auth.validation"));
 const middleware_1 = require("../../middleware");
 const router = (0, express_1.Router)();
-router.post("/login", (0, middleware_1.validation)(validtors.login), (req, res, next) => {
-    try {
-        const data = auth_service_1.default.login(req.body);
-        (0, response_1.successResponse)({
-            //we get it from the auth.entity file
-            res,
-            data,
-        });
-        return;
-    }
-    catch (error) {
-        next(error);
-        return;
-    }
+router.post("/login", (0, middleware_1.validation)(validtors.login), async (req, res, next) => {
+    const data = await auth_service_1.default.login(req.body, `${req.protocol}://${req.host}`);
+    return (0, response_1.successResponse)({ res, data });
 });
 router.post("/signup", (0, middleware_1.validation)(validtors.signup), async (req, res, next) => {
     try {

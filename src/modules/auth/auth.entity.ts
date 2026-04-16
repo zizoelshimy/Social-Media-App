@@ -8,3 +8,5 @@ export interface ISignUpResponse extends ILoginResponse{
    username:string;
    _id:string;
 }
+
+export interface ILoginResponse{ access_token: string; refresh_token: string }

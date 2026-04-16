@@ -1,7 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import authServise from "./auth.service";
 import { successResponse } from "../../common/response";
-import { ILoginResponse } from "./auth.entity";
 import * as validtors from "./auth.validation";
 import { validation } from "../../middleware";
 const router: Router = Router();
@@ -9,21 +8,11 @@ const router: Router = Router();
 router.post(
   "/login",
   validation(validtors.login),
-  (req: Request, res: Response, next: NextFunction): void => {
-    try {
-      const data = authServise.login(req.body);
-      successResponse<ILoginResponse>({
-        //we get it from the auth.entity file
-        res,
-        data,
-      });
-      return;
-    } catch (error) {
-      next(error);
-      return;
-    }
-  },
-);
+  async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
+    const data = await authServise.login(req.body, `${req.protocol}://${req.host}`)
+    return successResponse<{ access_token: string; refresh_token: string }>({ res, data })
+  }
+)
 
 router.post(
   "/signup",

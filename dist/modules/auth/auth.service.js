@@ -12,15 +12,34 @@ const redis_service_1 = __importDefault(require("../../common/services/redis.ser
 const enums_1 = require("../../common/enums");
 const otp_1 = require("../../common/utils/otp");
 const security_2 = require("../../common/utils/security");
+const token_servic_1 = require("../../common/services/token.servic");
 class AuthenticationService {
     userRepository;
     redis;
+    tokenService;
     constructor() {
         this.userRepository = new repository_1.UserRepository();
         this.redis = redis_service_1.default;
+        this.tokenService = new token_servic_1.TokenService();
     }
-    login(data) {
-        return data;
+    async login(inputs, issuer) {
+        {
+            const { email, password } = inputs;
+            const user = await this.userRepository.findOne({
+                filter: { email, provider: enums_1.ProviderEnum.SYSTEM, confirmEmail: { $exists: true, $ne: null } },
+            });
+            if (!user) {
+                throw new exceptions_1.NotFoundException("Invalid email or password");
+            }
+            if (!(await (0, security_2.compareHash)({
+                plaintext: password,
+                ciphertext: user.password
+            }))) {
+                throw new exceptions_1.NotFoundException("Invalid email or password");
+            }
+            return await this.tokenService.createLoginCredentials(user, issuer);
+        }
+        ;
     }
     // the in to db is raw data and the out data is hydrated wit recpect to the service and the out to front is raw data to can not update it
     async sendEmailOtp({ email, subject, title, }) {
