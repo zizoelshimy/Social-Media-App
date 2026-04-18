@@ -61,4 +61,21 @@ router.patch(
     });
   },
 );
+
+
+router.post("/signup/gmail", async (req, res, next) => {
+  try {
+    const { status, Credentials } = await authServise.signupWithGmail(
+      req.body.idToken,
+      `${req.protocol}://${req.get("host")}${req.originalUrl}`,
+    ); //to know the issuer of the token which is the url of the signup/gmail endpoint
+    return successResponse({
+      res,
+      status,
+      data: { ...Credentials },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 export default router;

@@ -14,6 +14,9 @@ import { EmailEnum, ProviderEnum } from "../../common/enums";
 import { createRandomOtp } from "../../common/utils/otp";
 import { compareHash } from "../../common/utils/security";
 import { TokenService } from "../../common/services/token.servic";
+import { OAuth2Client } from "google-auth-library/build/src/auth/oauth2client";
+import { GOOGLE_CLIENT_ID } from "../../config/config";
+import { TokenPayload } from "google-auth-library";
 export class AuthenticationService {
   private userRepository: UserRepository;
   private readonly redis: RedisService;
@@ -194,5 +197,70 @@ public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: str
       title: "Verify your email for Saraha account",
     });
   }
+
+
+ private async verifyGoogleAccount  (idToken:string):Promise<TokenPayload>  {
+  const client = new OAuth2Client();
+  if (!GOOGLE_CLIENT_ID) {
+  throw new Error("GOOGLE_CLIENT_ID is not configured");
+}
+  const ticket = await client.verifyIdToken({
+    idToken,
+    audience: GOOGLE_CLIENT_ID,
+  });
+  const payload = ticket.getPayload();
+  if (!payload?.email_verified) {
+   throw new  BadRequestException("fail to verify by google" );
+  }
+  return payload;
+};
+async loginWithGmail(idToken: string, issuer: string) {
+    
+    const payload = await this.verifyGoogleAccount(idToken)
+
+    const user = await this.userRepository.findOne({
+        filter: {
+            email: payload.email as string,
+            provider: ProviderEnum.GOOGLE
+        }
+    })
+
+    if (!user) {
+        throw new NotFoundException("Invalid account provider or not register account")
+    }
+
+    return await this.tokenService.createLoginCredentials(user, issuer);
+}
+signupWithGmail = async (idToken:string, issuer:string) => {
+  const payload = await this.verifyGoogleAccount(idToken);
+  console.log(payload);
+  const checkExist = await this.userRepository.findOne({
+    filter: { email: payload.email as string },
+  });
+  if (checkExist) {
+    if (checkExist.provider != ProviderEnum.GOOGLE) {
+      throw new ConflictException("Invalid provider");
+    }
+    return {
+      status: 200,
+      Credentials: await this.loginWithGmail(idToken, issuer),
+    };
+  }
+  const user = await this.userRepository.createOne({
+      data: {
+      firstName: payload.given_name as string,
+      lastName: payload.family_name as string,
+      email: payload.email as string,
+      profilePicture: payload.picture as string,
+      provider: ProviderEnum.GOOGLE,
+      confirmEmail: new Date(),
+    },
+  });
+  return {
+    status: 201,
+    Credentials: await this.tokenService.createLoginCredentials(user, issuer),
+  };
+};
+
 }
 export default new AuthenticationService();

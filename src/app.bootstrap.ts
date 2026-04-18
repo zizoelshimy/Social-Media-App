@@ -5,9 +5,10 @@ import { globalErrorHandler } from "./middleware";
 import { PORT } from "./config/config";
 import connectDB from "./DB/connection.db";
 import redisService from "./common/services/redis.service";
+import cors from "cors";
  const bootstrap=async ():Promise<void>=>{
     const app:express.Express=express();
-    app.use(express.json())
+    app.use(express.json(),cors())
     app.get("/",(req:Request,res:Response,next:NextFunction)=>{
        res.status(200).json({message:"Welcome to Social Media App"})
     })

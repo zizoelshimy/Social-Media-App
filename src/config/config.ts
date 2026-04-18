@@ -31,7 +31,7 @@ export const REDIS_URI = process.env.REDIS_URI as string;
 
 export const MAIL_TLS_REJECT_UNAUTHORIZED =
   process.env.MAIL_TLS_REJECT_UNAUTHORIZED !== "false";
-
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 export const EMAIL_APP_PASSWORD = process.env.EMAIL_APP_PASSWORD;
 export const EMAIL_APP = process.env.EMAIL_APP;
 export const APPLICATION_NAME = process.env.APPLICATION_NAME;

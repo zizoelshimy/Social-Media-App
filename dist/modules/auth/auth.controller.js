@@ -80,4 +80,17 @@ router.patch("/resend-confirm-email", (0, middleware_1.validation)(validtors.res
         data: user,
     });
 });
+router.post("/signup/gmail", async (req, res, next) => {
+    try {
+        const { status, Credentials } = await auth_service_1.default.signupWithGmail(req.body.idToken, `${req.protocol}://${req.get("host")}${req.originalUrl}`); //to know the issuer of the token which is the url of the signup/gmail endpoint
+        return (0, response_1.successResponse)({
+            res,
+            status,
+            data: { ...Credentials },
+        });
+    }
+    catch (error) {
+        next(error);
+    }
+});
 exports.default = router;
