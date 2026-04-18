@@ -59,14 +59,16 @@ class TokenService {
         return signuture;
     };
     //decoded token
-    decodeToken = async ({ token, tokenType = token_enum_1.TokenTypeEnum.ACCESS, }) => {
+    decodedToken = async ({ token, tokenType = token_enum_1.TokenTypeEnum.ACCESS, }) => {
         const decodedToken = jsonwebtoken_1.default.decode(token);
+        const decodedUserId = decodedToken?.sub ??
+            decodedToken?.userId;
         console.log(decodedToken);
         if (!decodedToken?.aud?.length) {
             throw new exceptions_1.BadRequestException("Missing audience in token");
         }
         const [tokenApproach, level] = decodedToken.aud || [];
-        if (!tokenApproach || !level) {
+        if (tokenApproach == undefined || level == undefined) {
             throw new exceptions_1.BadRequestException("Missing token audience");
         }
         if (tokenType != tokenApproach) {
@@ -75,18 +77,26 @@ class TokenService {
                 ", but got: " +
                 tokenApproach);
         }
+        if (!decodedUserId) {
+            throw new exceptions_1.UnauthorizedException("Invalid token payload");
+        }
         if (decodedToken.jti &&
             (await this.redis.get(this.redis.revokeTokenKey({
-                userId: decodedToken.sub,
+                userId: decodedUserId,
                 jti: decodedToken.jti,
             })))) {
             throw new exceptions_1.UnauthorizedException("Invalid login session");
         }
         const secret = await this.getTokenSignature(tokenApproach, level);
         const verifiedData = jsonwebtoken_1.default.verify(token, secret);
+        const verifiedUserId = verifiedData?.sub ??
+            verifiedData?.userId;
         console.log(verifiedData);
+        if (!verifiedUserId) {
+            throw new exceptions_1.UnauthorizedException("Invalid token payload");
+        }
         const user = await this.userRepository.findOne({
-            filter: { _id: verifiedData.sub, role: level },
+            filter: { _id: verifiedUserId, role: level },
         });
         if (!user) {
             throw new exceptions_1.NotFoundException("not registered account");
@@ -107,6 +117,7 @@ class TokenService {
             secret: accessSignuture, //secret key
             options: {
                 expiresIn: config_1.ACCESS_TOKEN_EXPIRES_IN,
+                subject: user._id.toString(),
                 issuer: issuer, // to specify the issuer of the token, which can be used for validation and verification purposes when the token is received by the server in subsequent requests
                 audience: [
                     token_enum_1.TokenTypeEnum.ACCESS,
@@ -120,6 +131,7 @@ class TokenService {
             secret: refreshSignature, //secret key
             options: {
                 expiresIn: config_1.REFRESH_TOKEN_EXPIRES_IN,
+                subject: user._id.toString(),
                 issuer: issuer, // to specify the issuer of the token, which can be used for validation and verification purposes when the token is received by the server in subsequent requests
                 audience: [
                     token_enum_1.TokenTypeEnum.REFRESH,

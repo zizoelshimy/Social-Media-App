@@ -1,6 +1,6 @@
 import express from "express"; 
 import type{ Request,  Response, NextFunction} from "express"; 
-import { authRouter } from "./modules";
+import { authRouter, userRouter } from "./modules";
 import { globalErrorHandler } from "./middleware";
 import { PORT } from "./config/config";
 import connectDB from "./DB/connection.db";
@@ -13,6 +13,7 @@ import redisService from "./common/services/redis.service";
     })
     //applying routing
     app.use("/auth",authRouter)
+    app.use("/user",userRouter)
        app.get("/*dummy",(req:Request,res:Response,next:NextFunction)=>{
        res.status(404).json({message:"invalid routing"})
     })

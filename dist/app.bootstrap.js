@@ -17,6 +17,7 @@ const bootstrap = async () => {
     });
     //applying routing
     app.use("/auth", modules_1.authRouter);
+    app.use("/user", modules_1.userRouter);
     app.get("/*dummy", (req, res, next) => {
         res.status(404).json({ message: "invalid routing" });
     });

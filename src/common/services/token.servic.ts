@@ -91,7 +91,7 @@ export class TokenService {
   };
 
   //decoded token
-  decodeToken = async ({
+  decodedToken = async ({
     token,
     tokenType = TokenTypeEnum.ACCESS,
   }: {
@@ -99,12 +99,15 @@ export class TokenService {
     tokenType: TokenTypeEnum;
   }): Promise<{ user: HydratedDocument<IUser>; decodedToken: JwtPayload }> => {
     const decodedToken = jwt.decode(token) as JwtPayload;
+    const decodedUserId =
+      (decodedToken?.sub as string | undefined) ??
+      (decodedToken?.userId as string | undefined);
     console.log(decodedToken);
     if (!decodedToken?.aud?.length) {
       throw new BadRequestException("Missing audience in token");
     }
     const [tokenApproach, level] = decodedToken.aud || [];
-    if (!tokenApproach || !level) {
+    if (tokenApproach == undefined || level == undefined) {
       throw new BadRequestException("Missing token audience");
     }
     if (tokenType != (tokenApproach as unknown as TokenTypeEnum)) {
@@ -115,12 +118,15 @@ export class TokenService {
           tokenApproach,
       );
     }
+    if (!decodedUserId) {
+      throw new UnauthorizedException("Invalid token payload");
+    }
 
     if (
       decodedToken.jti &&
       (await this.redis.get(
         this.redis.revokeTokenKey({
-          userId: decodedToken.sub as string,
+          userId: decodedUserId,
           jti: decodedToken.jti,
         }),
       ))
@@ -131,10 +137,16 @@ export class TokenService {
       tokenApproach as unknown as TokenTypeEnum,
       level as unknown as RoleEnum,
     );
-    const verifiedData = jwt.verify(token, secret);
+    const verifiedData = jwt.verify(token, secret) as JwtPayload;
+    const verifiedUserId =
+      (verifiedData?.sub as string | undefined) ??
+      (verifiedData?.userId as string | undefined);
     console.log(verifiedData);
+    if (!verifiedUserId) {
+      throw new UnauthorizedException("Invalid token payload");
+    }
     const user = await this.userRepository.findOne({
-      filter: { _id: verifiedData.sub, role: level as unknown as RoleEnum },
+      filter: { _id: verifiedUserId, role: level as unknown as RoleEnum },
     });
     if (!user) {
       throw new NotFoundException("not registered account");
@@ -161,6 +173,7 @@ export class TokenService {
       secret: accessSignuture, //secret key
       options: {
         expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+        subject: user._id.toString(),
         issuer: issuer, // to specify the issuer of the token, which can be used for validation and verification purposes when the token is received by the server in subsequent requests
         audience: [
           TokenTypeEnum.ACCESS as unknown as string,
@@ -174,6 +187,7 @@ export class TokenService {
       secret: refreshSignature, //secret key
       options: {
         expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+        subject: user._id.toString(),
         issuer: issuer, // to specify the issuer of the token, which can be used for validation and verification purposes when the token is received by the server in subsequent requests
         audience: [
           TokenTypeEnum.REFRESH as unknown as string,
