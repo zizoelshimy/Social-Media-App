@@ -7,7 +7,7 @@ import { TokenTypeEnum } from "../common/enums";
   decoded?:JwtPayload
 } */
 
-export const authentication = (tokenType: TokenTypeEnum.ACCESS) => {
+export const authentication = (tokenType: TokenTypeEnum.ACCESS | TokenTypeEnum.REFRESH ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const tokenService=new TokenService()
     const [key, credential] = req.headers?.authorization?.split(" ") || [];

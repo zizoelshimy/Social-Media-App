@@ -18,4 +18,22 @@ router.get("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), 
         data
     });
 });
+//logout
+router.post("/logout", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), async (req, res, next) => {
+    const status = await userService.logout(req.body, req.user, req.decoded);
+    return (0, response_1.successResponse)({
+        res,
+        message: "Logged out successfully",
+        data: { status },
+    });
+});
+router.post("/rotate-token", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.REFRESH), async (req, res, next) => {
+    const credentials = await userService.rotateToken(req.user, req.decoded, `${req.protocol}://${req.get("host")}${req.originalUrl}`); //to know the issuer of the token which is the url of the rotate-token endpoint
+    return (0, response_1.successResponse)({
+        res,
+        status: 201,
+        message: "Token rotated successfully",
+        data: credentials,
+    });
+});
 exports.default = router;

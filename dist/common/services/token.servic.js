@@ -142,5 +142,13 @@ class TokenService {
         });
         return { access_token, refresh_token };
     };
+    createRevokeToken = async ({ userId, jti, ttl }) => {
+        await this.redis.set({
+            key: this.redis.revokeTokenKey({ userId, jti }),
+            value: jti,
+            ttl
+        });
+        return;
+    };
 }
 exports.TokenService = TokenService;

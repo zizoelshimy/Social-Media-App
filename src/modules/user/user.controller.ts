@@ -19,6 +19,34 @@ router.get("/",
      })
 })
 
+//logout
+router.post("/logout", authentication(TokenTypeEnum.ACCESS), async (req, res, next) => {
+  const status = await userService.logout(req.body, req.user, req.decoded as { jti: string, iat: number, sub: string });
+  return successResponse({
+    res,
+    message: "Logged out successfully",
+    data: { status },
+  });
+});
+
+router.post(
+  "/rotate-token",
+  authentication(TokenTypeEnum.REFRESH),
+  async (req, res, next) => {
+    const credentials = await userService.rotateToken(
+      req.user,
+      req.decoded as { jti: string, iat: number, sub: string },
+      `${req.protocol}://${req.get("host")}${req.originalUrl}`,
+    ); //to know the issuer of the token which is the url of the rotate-token endpoint
+    return successResponse({
+      res,
+      status: 201,
+      message: "Token rotated successfully",
+      data: credentials,
+    });
+  },
+);
+
 
 
 export default router;

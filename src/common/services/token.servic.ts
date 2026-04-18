@@ -17,7 +17,7 @@ import {
 } from "../exceptions";
 import { UserRepository } from "../../DB/repository";
 import { RedisService } from "./redis.service";
-import { HydratedDocument } from "mongoose";
+import { HydratedDocument, Types } from "mongoose";
 import { IUser } from "../interfaces";
 import { randomUUID } from "crypto";
 type SignaturesType = { accessSignuture: string; refreshSignature: string };
@@ -198,4 +198,12 @@ export class TokenService {
     });
     return { access_token, refresh_token };
   };
+  createRevokeToken = async ({userId, jti, ttl}:{userId: Types.ObjectId|string, jti: string, ttl: number})=>{
+  await this.redis.set({
+        key:this.redis.revokeTokenKey({userId, jti}),
+        value: jti,
+        ttl
+      });
+      return;
+}
 }
