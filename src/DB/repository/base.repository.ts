@@ -42,6 +42,14 @@ export abstract class DataBaseRepository<TRawDoc> {
     return await this.model.create(data as any, options);
   }
 
+   async insertMany({
+    data,
+  }: {
+    data: AnyKeys<TRawDoc>[];
+  }): Promise<HydratedDocument<TRawDoc>[]> {
+    return await this.model.insertMany(data as any) as HydratedDocument<TRawDoc>[];
+  }
+
   async createOne({
     data,
     options,
@@ -84,6 +92,20 @@ export abstract class DataBaseRepository<TRawDoc> {
     options?: QueryOptions<TRawDoc> | null | undefined;
   }): Promise<any> {
     const doc = this.model.findOne(filter, projection);
+    if (options?.lean) doc.lean(options.lean);
+    return await doc.exec();
+  }
+
+  async find({
+    filter,
+    projection,
+    options,
+  }: {
+    filter?: QueryFilter<TRawDoc>;
+    projection?: ProjectionType<TRawDoc> | null | undefined;
+    options?: QueryOptions<TRawDoc> | null | undefined;
+  }): Promise<HydratedDocument<TRawDoc>[]> {
+    const doc = this.model.find(filter, projection);
     if (options?.lean) doc.lean(options.lean);
     return await doc.exec();
   }
@@ -146,7 +168,7 @@ async findOneAndUpdate({
     update: UpdateQuery<TRawDoc>,
     options: QueryOptions<TRawDoc> &ReturnsNewDoc
 }):Promise<HydratedDocument<TRawDoc> | null> {
-    return await this.model.findByIdAndUpdate(filter , update , options)
+    return await this.model.findByIdAndUpdate(filter , {...update,$inc:{__v:1}} , options) //to increment the version key by 1 every time we update the document to prevent concurrent updates and to know how many times the document has been updated
 }
 
 async findByIdAndUpdate({

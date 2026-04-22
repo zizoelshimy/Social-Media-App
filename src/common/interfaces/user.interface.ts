@@ -4,6 +4,7 @@ export interface IUser {
     firstName: string;
     lastName: string;
     username?: string;
+    slug:string;
     email: string;
     phone?: string;
     password: string;
@@ -21,4 +22,10 @@ export interface IUser {
 
     createdAt?: Date;
     updatedAt?: Date;
+    deletedAt?: Date;
+    restoredAt?: Date;
+
+    extra:{
+        name : string;
+    }
 }

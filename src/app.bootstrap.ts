@@ -6,6 +6,8 @@ import { PORT } from "./config/config";
 import connectDB from "./DB/connection.db";
 import redisService from "./common/services/redis.service";
 import cors from "cors";
+import { UserRepository } from "./DB/repository";
+import("./DB/repository/base.repository.js")
  const bootstrap=async ():Promise<void>=>{
     const app:express.Express=express();
     app.use(express.json(),cors())
@@ -21,6 +23,19 @@ import cors from "cors";
     //connecting the database
     await connectDB()
     await redisService.connect()
+    try {
+      const userRepository=await new UserRepository()
+      const user=await userRepository.insertMany({
+         data:[{
+            firstName:"John",
+            lastName:"Doe",
+            email:"john.doe@example.com"
+         }]
+      })
+    } catch (error) {
+      
+    }
+
     //application-error
     app.use(globalErrorHandler)
      app.listen(PORT,()=>{
