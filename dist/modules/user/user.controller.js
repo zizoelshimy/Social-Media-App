@@ -9,13 +9,25 @@ const user_service_1 = __importDefault(require("./user.service"));
 const middleware_1 = require("../../middleware");
 const enums_1 = require("../../common/enums");
 const user_authorization_1 = require("./user.authorization");
+const multer_1 = require("../../common/utils/multer");
 const router = (0, express_1.Router)();
 const userService = new user_service_1.default();
 router.get("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, middleware_1.authorization)(user_authorization_1.endpoint.profile), async (req, res, next) => {
     const data = await userService.profile(req.user);
     return (0, response_1.successResponse)({
         res,
-        data
+        data,
+    });
+});
+router.patch("/profile-image", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, multer_1.cloudFileUpload)({
+    storageApproach: enums_1.StorageApproachEnum.DISK,
+    validation: multer_1.fileFieldValidation.image,
+    maxSize: 2
+}).single("attachment"), async (req, res, next) => {
+    await userService.profileImage(req.file, req.user);
+    return (0, response_1.successResponse)({
+        res,
+        data: { file: req.file },
     });
 });
 //logout

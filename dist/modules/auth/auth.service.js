@@ -19,6 +19,8 @@ class AuthenticationService {
     userRepository;
     redis;
     tokenService;
+    maxOtpAttempts = 3;
+    otpBlockTtlSeconds = 7 * 60;
     constructor() {
         this.userRepository = new repository_1.UserRepository();
         this.redis = redis_service_1.default;
@@ -28,22 +30,32 @@ class AuthenticationService {
         {
             const { email, password } = inputs;
             const user = await this.userRepository.findOne({
-                filter: { email, provider: enums_1.ProviderEnum.SYSTEM, confirmEmail: { $exists: true, $ne: null } },
+                filter: {
+                    email,
+                    provider: enums_1.ProviderEnum.SYSTEM,
+                    confirmEmail: { $exists: true, $ne: null },
+                },
             });
             if (!user) {
                 throw new exceptions_1.NotFoundException("Invalid email or password");
             }
             if (!(await (0, security_2.compareHash)({
                 plaintext: password,
-                ciphertext: user.password
+                ciphertext: user.password,
             }))) {
                 throw new exceptions_1.NotFoundException("Invalid email or password");
             }
             return await this.tokenService.createLoginCredentials(user, issuer);
         }
-        ;
     }
     // the in to db is raw data and the out data is hydrated wit recpect to the service and the out to front is raw data to can not update it
+    async clearOtpState({ email, subject, }) {
+        await this.redis.deleteKey([
+            this.redis.otpKey({ email, subject }),
+            this.redis.maxAttemptOtpKey({ email, subject }),
+            this.redis.blockOtpKey({ email, subject }),
+        ]);
+    }
     async sendEmailOtp({ email, subject, title, }) {
         const isBlocked = await this.redis.ttl(this.redis.blockOtpKey({ email, subject }));
         if (isBlocked > 0) {
@@ -56,12 +68,13 @@ class AuthenticationService {
         // Check the number of resend attempts and block if it exceeds the limit
         const maxtrial = Number((await this.redis.get(this.redis.maxAttemptOtpKey({ email, subject }))) ||
             0);
-        if (maxtrial >= 3) {
+        if (maxtrial >= this.maxOtpAttempts) {
             await this.redis.set({
                 key: this.redis.blockOtpKey({ email, subject }),
                 value: 1,
-                ttl: 7 * 60,
+                ttl: this.otpBlockTtlSeconds,
             });
+            await this.redis.deleteKey(this.redis.maxAttemptOtpKey({ email, subject }));
             throw new exceptions_1.BadRequestException(`Sorry, you have exceeded the maximum number of OTP resend attempts. Please try again after 7 minutes`);
         }
         const code = await (0, otp_1.createRandomOtp)();
@@ -78,7 +91,12 @@ class AuthenticationService {
                 subject,
                 html: (0, email_1.emailTemplate)({ code, title }),
             });
-            await this.redis.incr(this.redis.maxAttemptOtpKey({ email, subject }));
+            const maxAttemptKey = this.redis.maxAttemptOtpKey({ email, subject });
+            await this.redis.incr(maxAttemptKey);
+            await this.redis.expire({
+                key: maxAttemptKey,
+                ttl: this.otpBlockTtlSeconds,
+            });
         });
     }
     async signup({ email, username, password, phone, }) {
@@ -94,13 +112,17 @@ class AuthenticationService {
             data: {
                 email,
                 username,
-                password: await (0, security_1.generateHash)({ plaintext: password }),
-                phone: phone ? await (0, security_1.generateEncryption)(phone) : undefined,
+                password,
+                phone,
             },
         });
         if (!user) {
             throw new exceptions_1.BadRequestException("Fail");
         }
+        await this.clearOtpState({
+            email,
+            subject: enums_1.EmailEnum.CONFIRM_EMAIL,
+        });
         await this.sendEmailOtp({
             email,
             subject: enums_1.EmailEnum.CONFIRM_EMAIL,
@@ -131,7 +153,10 @@ class AuthenticationService {
         }
         account.confirmEmail = new Date();
         await account.save();
-        await this.redis.deleteKey(this.redis.otpKey({ email, subject: enums_1.EmailEnum.CONFIRM_EMAIL }));
+        await this.clearOtpState({
+            email,
+            subject: enums_1.EmailEnum.CONFIRM_EMAIL,
+        });
         return account;
     }
     // resend confirm email if OTP expired
@@ -167,14 +192,13 @@ class AuthenticationService {
         }
         return payload;
     }
-    ;
     async loginWithGmail(idToken, issuer) {
         const payload = await this.verifyGoogleAccount(idToken);
         const user = await this.userRepository.findOne({
             filter: {
                 email: payload.email,
-                provider: enums_1.ProviderEnum.GOOGLE
-            }
+                provider: enums_1.ProviderEnum.GOOGLE,
+            },
         });
         if (!user) {
             throw new exceptions_1.NotFoundException("Invalid account provider or not register account");

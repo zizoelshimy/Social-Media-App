@@ -1,4 +1,9 @@
-import { confirmEmailDto, LoginDto, resendConfirmEmailDto, SignUpDto } from "./auth.dto";
+import {
+  confirmEmailDto,
+  LoginDto,
+  resendConfirmEmailDto,
+  SignUpDto,
+} from "./auth.dto";
 import { IUser } from "../../common/interfaces";
 import { UserRepository } from "../../DB/repository";
 import {
@@ -6,7 +11,7 @@ import {
   ConflictException,
   NotFoundException,
 } from "../../common/exceptions";
-import { generateEncryption, generateHash } from "../../common/utils/security";
+import { generateHash } from "../../common/utils/security";
 import { emailEvent, emailTemplate, sendEmail } from "../../common/utils/email";
 import { RedisService } from "../../common/services";
 import redisService from "../../common/services/redis.service";
@@ -21,31 +26,55 @@ export class AuthenticationService {
   private userRepository: UserRepository;
   private readonly redis: RedisService;
   private readonly tokenService: TokenService;
+  private readonly maxOtpAttempts = 3;
+  private readonly otpBlockTtlSeconds = 7 * 60;
   constructor() {
     this.userRepository = new UserRepository();
     this.redis = redisService;
     this.tokenService = new TokenService();
   }
-public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: string; refresh_token: string }> { {
-  const { email, password } = inputs;
-  const user = await this.userRepository.findOne({
-    filter: { email, provider: ProviderEnum.SYSTEM ,confirmEmail: { $exists: true, $ne: null } },
-  });
-  if (!user) {
-    throw new NotFoundException("Invalid email or password");
+  public async login(
+    inputs: LoginDto,
+    issuer: string,
+  ): Promise<{ access_token: string; refresh_token: string }> {
+    {
+      const { email, password } = inputs;
+      const user = await this.userRepository.findOne({
+        filter: {
+          email,
+          provider: ProviderEnum.SYSTEM,
+          confirmEmail: { $exists: true, $ne: null },
+        },
+      });
+      if (!user) {
+        throw new NotFoundException("Invalid email or password");
+      }
+      if (
+        !(await compareHash({
+          plaintext: password,
+          ciphertext: user.password,
+        }))
+      ) {
+        throw new NotFoundException("Invalid email or password");
+      }
+      return await this.tokenService.createLoginCredentials(user, issuer);
+    }
   }
-  if (
-    !(await compareHash({
-      plaintext: password,
-      ciphertext: user.password
-    }))
-  ) {
-    throw new NotFoundException("Invalid email or password");
-  }
-  return await this.tokenService.createLoginCredentials(user, issuer);
-};
-}
   // the in to db is raw data and the out data is hydrated wit recpect to the service and the out to front is raw data to can not update it
+
+  private async clearOtpState({
+    email,
+    subject,
+  }: {
+    email: string;
+    subject: EmailEnum;
+  }): Promise<void> {
+    await this.redis.deleteKey([
+      this.redis.otpKey({ email, subject }),
+      this.redis.maxAttemptOtpKey({ email, subject }),
+      this.redis.blockOtpKey({ email, subject }),
+    ]);
+  }
 
   private async sendEmailOtp({
     email,
@@ -78,12 +107,15 @@ public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: str
       (await this.redis.get(this.redis.maxAttemptOtpKey({ email, subject }))) ||
         0,
     );
-    if (maxtrial >= 3) {
+    if (maxtrial >= this.maxOtpAttempts) {
       await this.redis.set({
         key: this.redis.blockOtpKey({ email, subject }),
         value: 1,
-        ttl: 7 * 60,
+        ttl: this.otpBlockTtlSeconds,
       });
+      await this.redis.deleteKey(
+        this.redis.maxAttemptOtpKey({ email, subject }),
+      );
       throw new BadRequestException(
         `Sorry, you have exceeded the maximum number of OTP resend attempts. Please try again after 7 minutes`,
       );
@@ -102,7 +134,12 @@ public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: str
         subject,
         html: emailTemplate({ code, title }),
       });
-      await this.redis.incr(this.redis.maxAttemptOtpKey({ email, subject }));
+      const maxAttemptKey = this.redis.maxAttemptOtpKey({ email, subject });
+      await this.redis.incr(maxAttemptKey);
+      await this.redis.expire({
+        key: maxAttemptKey,
+        ttl: this.otpBlockTtlSeconds,
+      });
     });
   }
   public async signup({
@@ -123,14 +160,18 @@ public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: str
       data: {
         email,
         username,
-        password: await generateHash({ plaintext: password }),
-        phone: phone ? await generateEncryption(phone) : undefined,
+        password,
+        phone,
       },
     });
 
     if (!user) {
       throw new BadRequestException("Fail");
     }
+    await this.clearOtpState({
+      email,
+      subject: EmailEnum.CONFIRM_EMAIL,
+    });
     await this.sendEmailOtp({
       email,
       subject: EmailEnum.CONFIRM_EMAIL,
@@ -170,9 +211,10 @@ public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: str
 
     account.confirmEmail = new Date();
     await account.save();
-    await this.redis.deleteKey(
-      this.redis.otpKey({ email, subject: EmailEnum.CONFIRM_EMAIL }),
-    );
+    await this.clearOtpState({
+      email,
+      subject: EmailEnum.CONFIRM_EMAIL,
+    });
 
     return account;
   }
@@ -198,69 +240,68 @@ public async login  (inputs:LoginDto, issuer:string):Promise<{ access_token: str
     });
   }
 
-
- private async verifyGoogleAccount  (idToken:string):Promise<TokenPayload>  {
-  const client = new OAuth2Client();
-  if (!GOOGLE_CLIENT_ID) {
-  throw new Error("GOOGLE_CLIENT_ID is not configured");
-}
-  const ticket = await client.verifyIdToken({
-    idToken,
-    audience: GOOGLE_CLIENT_ID,
-  });
-  const payload = ticket.getPayload();
-  if (!payload?.email_verified) {
-   throw new  BadRequestException("fail to verify by google" );
+  private async verifyGoogleAccount(idToken: string): Promise<TokenPayload> {
+    const client = new OAuth2Client();
+    if (!GOOGLE_CLIENT_ID) {
+      throw new Error("GOOGLE_CLIENT_ID is not configured");
+    }
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.email_verified) {
+      throw new BadRequestException("fail to verify by google");
+    }
+    return payload;
   }
-  return payload;
-};
-async loginWithGmail(idToken: string, issuer: string) {
-    
-    const payload = await this.verifyGoogleAccount(idToken)
+  async loginWithGmail(idToken: string, issuer: string) {
+    const payload = await this.verifyGoogleAccount(idToken);
 
     const user = await this.userRepository.findOne({
-        filter: {
-            email: payload.email as string,
-            provider: ProviderEnum.GOOGLE
-        }
-    })
+      filter: {
+        email: payload.email as string,
+        provider: ProviderEnum.GOOGLE,
+      },
+    });
 
     if (!user) {
-        throw new NotFoundException("Invalid account provider or not register account")
+      throw new NotFoundException(
+        "Invalid account provider or not register account",
+      );
     }
 
     return await this.tokenService.createLoginCredentials(user, issuer);
-}
-signupWithGmail = async (idToken:string, issuer:string) => {
-  const payload = await this.verifyGoogleAccount(idToken);
-  console.log(payload);
-  const checkExist = await this.userRepository.findOne({
-    filter: { email: payload.email as string },
-  });
-  if (checkExist) {
-    if (checkExist.provider != ProviderEnum.GOOGLE) {
-      throw new ConflictException("Invalid provider");
-    }
-    return {
-      status: 200,
-      Credentials: await this.loginWithGmail(idToken, issuer),
-    };
   }
-  const user = await this.userRepository.createOne({
+  signupWithGmail = async (idToken: string, issuer: string) => {
+    const payload = await this.verifyGoogleAccount(idToken);
+    console.log(payload);
+    const checkExist = await this.userRepository.findOne({
+      filter: { email: payload.email as string },
+    });
+    if (checkExist) {
+      if (checkExist.provider != ProviderEnum.GOOGLE) {
+        throw new ConflictException("Invalid provider");
+      }
+      return {
+        status: 200,
+        Credentials: await this.loginWithGmail(idToken, issuer),
+      };
+    }
+    const user = await this.userRepository.createOne({
       data: {
-      firstName: payload.given_name as string,
-      lastName: payload.family_name as string,
-      email: payload.email as string,
-      profilePicture: payload.picture as string,
-      provider: ProviderEnum.GOOGLE,
-      confirmEmail: new Date(),
-    },
-  });
-  return {
-    status: 201,
-    Credentials: await this.tokenService.createLoginCredentials(user, issuer),
+        firstName: payload.given_name as string,
+        lastName: payload.family_name as string,
+        email: payload.email as string,
+        profilePicture: payload.picture as string,
+        provider: ProviderEnum.GOOGLE,
+        confirmEmail: new Date(),
+      },
+    });
+    return {
+      status: 201,
+      Credentials: await this.tokenService.createLoginCredentials(user, issuer),
+    };
   };
-};
-
 }
 export default new AuthenticationService();

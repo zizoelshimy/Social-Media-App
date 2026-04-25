@@ -51,5 +51,8 @@ class UserService {
         }
         ;
     }
+    async profileImage(file, user) {
+        return user.toJSON();
+    }
 }
 exports.default = UserService;

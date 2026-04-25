@@ -9,6 +9,9 @@ class DataBaseRepository {
     async create({ data, options, }) {
         return await this.model.create(data, options);
     }
+    async insertMany({ data, }) {
+        return await this.model.insertMany(data);
+    }
     async createOne({ data, options, }) {
         const [doc] = await this.create({ data: [data], options });
         return doc;
@@ -17,6 +20,12 @@ class DataBaseRepository {
     //implementation of findOne
     async findOne({ filter, projection, options, }) {
         const doc = this.model.findOne(filter, projection);
+        if (options?.lean)
+            doc.lean(options.lean);
+        return await doc.exec();
+    }
+    async find({ filter, projection, options, }) {
+        const doc = this.model.find(filter, projection);
         if (options?.lean)
             doc.lean(options.lean);
         return await doc.exec();
@@ -33,7 +42,7 @@ class DataBaseRepository {
         return await this.model.updateOne(filter, update, options);
     }
     async findOneAndUpdate({ filter, update, options = { new: true } }) {
-        return await this.model.findByIdAndUpdate(filter, update, options);
+        return await this.model.findByIdAndUpdate(filter, { ...update, $inc: { __v: 1 } }, options); //to increment the version key by 1 every time we update the document to prevent concurrent updates and to know how many times the document has been updated
     }
     async findByIdAndUpdate({ _id, update, options = { new: true } }) {
         return await this.model.findByIdAndUpdate(_id, update, options);

@@ -2,32 +2,60 @@ import { type NextFunction, Router } from "express";
 import type { Request, Response } from "express";
 import { successResponse } from "../../common/response";
 import UserService from "./user.service";
-import { authentication, authorization } from "../../middleware";
-import { TokenTypeEnum } from "../../common/enums";
+import { authentication, authorization, validation } from "../../middleware";
+import { StorageApproachEnum, TokenTypeEnum } from "../../common/enums";
 import { endpoint } from "./user.authorization";
+import { cloudFileUpload, fileFieldValidation } from "../../common/utils/multer";
 const router = Router();
 const userService = new UserService();
 
-router.get("/",
-    authentication(TokenTypeEnum.ACCESS),
-    authorization(endpoint.profile),
-    async (req:Request, res:Response,next:NextFunction) => {
-  const data=  await userService.profile(req.user)
-     return successResponse({
-        res,
-        data
-     })
-})
+router.get(
+  "/",
+  authentication(TokenTypeEnum.ACCESS),
+  authorization(endpoint.profile),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const data = await userService.profile(req.user);
+    return successResponse({
+      res,
+      data,
+    });
+  },
+);
+
+router.patch(
+  "/profile-image",
+  authentication(TokenTypeEnum.ACCESS),
+  cloudFileUpload({ 
+    storageApproach: StorageApproachEnum.DISK, 
+    validation:fileFieldValidation.image,
+    maxSize:2 
+  }).single("attachment"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    await userService.profileImage(req.file as Express.Multer.File, req.user);
+    return successResponse({
+      res,
+      data: { file: req.file },
+    });
+  },
+);
 
 //logout
-router.post("/logout", authentication(TokenTypeEnum.ACCESS), async (req, res, next) => {
-  const status = await userService.logout(req.body, req.user, req.decoded as { jti: string, iat: number, sub: string });
-  return successResponse({
-    res,
-    message: "Logged out successfully",
-    data: { status },
-  });
-});
+router.post(
+  "/logout",
+  authentication(TokenTypeEnum.ACCESS),
+  async (req, res, next) => {
+    const status = await userService.logout(
+      req.body,
+      req.user,
+      req.decoded as { jti: string; iat: number; sub: string },
+    );
+    return successResponse({
+      res,
+      message: "Logged out successfully",
+      data: { status },
+    });
+  },
+);
 
 router.post(
   "/rotate-token",
@@ -35,7 +63,7 @@ router.post(
   async (req, res, next) => {
     const credentials = await userService.rotateToken(
       req.user,
-      req.decoded as { jti: string, iat: number, sub: string },
+      req.decoded as { jti: string; iat: number; sub: string },
       `${req.protocol}://${req.get("host")}${req.originalUrl}`,
     ); //to know the issuer of the token which is the url of the rotate-token endpoint
     return successResponse({
@@ -46,7 +74,5 @@ router.post(
     });
   },
 );
-
-
 
 export default router;

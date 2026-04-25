@@ -1,5 +1,5 @@
 import { NextFunction ,Request,Response} from "express"
-import { ForbiddenException, UnauthorizedException } from "../common/exceptions";
+import { UnauthorizedException } from "../common/exceptions";
 import { TokenService } from "../common/services";
 import { TokenTypeEnum } from "../common/enums";
 /* export interface IRequest extends Request {

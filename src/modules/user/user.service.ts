@@ -56,5 +56,8 @@ async rotateToken  (token: HydratedDocument<IUser>, {sub,jti, iat}: { jti: strin
 
 
 }
+async profileImage(file:Express.Multer.File, user: HydratedDocument<IUser>): Promise<any> {
+  return user.toJSON()
+}
 }
 export default UserService;

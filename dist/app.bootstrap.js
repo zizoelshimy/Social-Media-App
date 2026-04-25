@@ -10,6 +10,7 @@ const config_1 = require("./config/config");
 const connection_db_1 = __importDefault(require("./DB/connection.db"));
 const redis_service_1 = __importDefault(require("./common/services/redis.service"));
 const cors_1 = __importDefault(require("cors"));
+import("./DB/repository/base.repository.js");
 const bootstrap = async () => {
     const app = (0, express_1.default)();
     app.use(express_1.default.json(), (0, cors_1.default)());
