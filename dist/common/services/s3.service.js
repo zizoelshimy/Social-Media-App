@@ -19,6 +19,7 @@ class S3Service {
             }
         });
     }
+    //this is for small file upload
     async uploadAsset({ storageApproach = enums_1.StorageApproachEnum.MEMORY, Bucket, path = "general", file, ACL = client_s3_1.ObjectCannedACL.private, contentType }) {
         const command = new client_s3_1.PutObjectCommand({
             Bucket,
@@ -33,6 +34,7 @@ class S3Service {
         await this.client.send(command);
         return command.input.Key;
     }
+    //this is for large file upload using multipart upload
     async uploadLargeAsset({ storageApproach = enums_1.StorageApproachEnum.DISK, Bucket, path = "general", file, ACL = client_s3_1.ObjectCannedACL.private, contentType, partSize = 5 }) {
         const uploadFile = new lib_storage_1.Upload({
             client: this.client,
@@ -50,6 +52,35 @@ class S3Service {
             console.log(`File Upload is ${(progress.loaded / progress.total) * 100}% done`); //this is for  tell me the progress of the upload in percentage
         });
         return await uploadFile.done();
+    }
+    async uploadAssets({ storageApproach = enums_1.StorageApproachEnum.MEMORY, uploadApproach = enums_1.UploadApproachEnum.SMALL, Bucket, path = "general", files, ACL = client_s3_1.ObjectCannedACL.private, contentType }) {
+        let urls = [];
+        if (uploadApproach === enums_1.UploadApproachEnum.LARGE) {
+            const data = await Promise.all(files.map((file) => {
+                return this.uploadLargeAsset({
+                    storageApproach,
+                    file,
+                    ACL,
+                    Bucket,
+                    path,
+                    contentType
+                });
+            }));
+            urls = data.map(ele => ele.Key);
+        }
+        else {
+            urls = await Promise.all(files.map((file) => {
+                return this.uploadAsset({
+                    storageApproach,
+                    file,
+                    ACL,
+                    Bucket,
+                    path,
+                    contentType
+                });
+            }));
+        }
+        return urls;
     }
 }
 exports.S3Service = S3Service;

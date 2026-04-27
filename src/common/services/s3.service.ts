@@ -2,7 +2,7 @@ import {CompleteMultipartUploadCommand, CompleteMultipartUploadCommandOutput, Ob
 import { APPLICATION_NAME, AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY } from "../../config/config";
 import { randomUUID } from "node:crypto";
 import { BadRequestException } from "../exceptions";
-import { StorageApproachEnum } from "../enums";
+import { StorageApproachEnum, UploadApproachEnum } from "../enums";
 import { createReadStream } from "node:fs";
 import { Upload } from "@aws-sdk/lib-storage";
 export class S3Service {
@@ -18,6 +18,7 @@ export class S3Service {
                 }
         })
     }
+    //this is for small file upload
     async uploadAsset({
         storageApproach=StorageApproachEnum.MEMORY,
         Bucket,
@@ -31,8 +32,8 @@ export class S3Service {
         path:string,
         file:Express.Multer.File
         ACL?:ObjectCannedACL,
-        contentType?:string
-    }) {
+        contentType?:string | undefined
+    }) :Promise<string> {
         const command = new PutObjectCommand({
             Bucket,
             Key:`${APPLICATION_NAME}/${path}/${randomUUID()}__${file.originalname}`,
@@ -47,8 +48,7 @@ export class S3Service {
         return command.input.Key;
 
     }
-
-
+    //this is for large file upload using multipart upload
     async uploadLargeAsset({
         storageApproach=StorageApproachEnum.DISK,
         Bucket,
@@ -63,7 +63,7 @@ export class S3Service {
         path:string,
         file:Express.Multer.File
         ACL?:ObjectCannedACL,
-        contentType?:string,
+        contentType?:string | undefined,
         partSize?:number
     }):Promise<CompleteMultipartUploadCommandOutput> {
        const uploadFile =new Upload({
@@ -83,5 +83,57 @@ export class S3Service {
        });
         return await uploadFile.done();
     }
+
+     async uploadAssets({
+        storageApproach=StorageApproachEnum.MEMORY,
+        uploadApproach=UploadApproachEnum.SMALL,
+        Bucket,
+        path="general",
+        files,
+        ACL=ObjectCannedACL.private,
+        contentType
+    }:{
+        storageApproach?:StorageApproachEnum,
+        uploadApproach?:UploadApproachEnum,
+        Bucket:string,
+        path:string,
+        files:Express.Multer.File []
+        ACL?:ObjectCannedACL,
+        contentType?:string
+    }):Promise<string[]> {
+        let urls :string [] = []
+        if (uploadApproach===UploadApproachEnum.LARGE) {    
+          const data=  await Promise.all(
+            files.map((file)=>{
+           return   this.uploadLargeAsset({
+         storageApproach,
+            file,
+            ACL,
+            Bucket,
+            path,
+            contentType   
+                 })
+            })
+        )
+        urls = data.map(ele => ele.Key as string);
+        } else {
+          urls=  await Promise.all(
+            files.map((file)=>{
+           return   this.uploadAsset({
+         storageApproach,
+            file,
+            ACL,
+            Bucket,
+            path,
+            contentType   
+                 })
+            })
+        )
+        }
+       
+       
+        return urls;
+    }
+
 }
 export const s3Service = new S3Service()

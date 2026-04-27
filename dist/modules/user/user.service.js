@@ -32,26 +32,30 @@ class UserService {
                 await this.redis.deleteKey(await this.redis.keys(this.redis.baseRevokeTokenKey(sub)));
                 break;
             default:
-                await this.tokenService.createRevokeToken({ userId: sub, jti, ttl: iat + config_1.REFRESH_TOKEN_EXPIRES_IN });
+                await this.tokenService.createRevokeToken({
+                    userId: sub,
+                    jti,
+                    ttl: iat + config_1.REFRESH_TOKEN_EXPIRES_IN,
+                });
                 status = 201;
                 break;
         }
         return status;
     }
-    ;
     //rotate token
     async rotateToken(token, { sub, jti, iat }, issuer) {
-        {
-            if (!token) {
-                throw new exceptions_1.NotFoundException("not registered account");
-            }
-            if ((iat + config_1.REFRESH_TOKEN_EXPIRES_IN) * 1000 >= Date.now() + (5 * 60 * 1000)) {
-                throw new exceptions_1.ConflictException("current token is still valid");
-            }
-            await this.tokenService.createRevokeToken({ userId: sub, jti, ttl: iat + config_1.REFRESH_TOKEN_EXPIRES_IN });
-            return this.tokenService.createLoginCredentials(token, issuer);
+        if (!token) {
+            throw new exceptions_1.NotFoundException("not registered account");
         }
-        ;
+        if ((iat + config_1.REFRESH_TOKEN_EXPIRES_IN) * 1000 >= Date.now() + 5 * 60 * 1000) {
+            throw new exceptions_1.ConflictException("current token is still valid");
+        }
+        await this.tokenService.createRevokeToken({
+            userId: sub,
+            jti,
+            ttl: iat + config_1.REFRESH_TOKEN_EXPIRES_IN,
+        });
+        return this.tokenService.createLoginCredentials(token, issuer);
     }
     async profileImage(file, user) {
         const { Key } = await this.s3.uploadLargeAsset({
@@ -63,6 +67,18 @@ class UserService {
         user.profilePicture = Key;
         await user.save();
         console.log({ Key });
+        return user.toJSON();
+    }
+    async profileCoverImages(files, user) {
+        const urls = await this.s3.uploadAssets({
+            Bucket: "c45nodeonlinesunday",
+            files,
+            path: `Users/${user._id.toString()}/Profile/Cover`,
+            storageApproach: enums_1.StorageApproachEnum.DISK,
+            uploadApproach: enums_1.UploadApproachEnum.LARGE
+        });
+        user.profileCoverPictures = urls;
+        await user.save();
         return user.toJSON();
     }
 }

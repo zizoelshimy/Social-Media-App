@@ -2,10 +2,13 @@ import { type NextFunction, Router } from "express";
 import type { Request, Response } from "express";
 import { successResponse } from "../../common/response";
 import UserService from "./user.service";
-import { authentication, authorization, validation } from "../../middleware";
-import { StorageApproachEnum, TokenTypeEnum } from "../../common/enums";
+import { authentication, authorization } from "../../middleware";
+import { StorageApproachEnum, TokenTypeEnum, UploadApproachEnum } from "../../common/enums";
 import { endpoint } from "./user.authorization";
-import { cloudFileUpload, fileFieldValidation } from "../../common/utils/multer";
+import {
+  cloudFileUpload,
+  fileFieldValidation,
+} from "../../common/utils/multer";
 const router = Router();
 const userService = new UserService();
 
@@ -25,13 +28,44 @@ router.get(
 router.patch(
   "/profile-image",
   authentication(TokenTypeEnum.ACCESS),
-  cloudFileUpload({ 
-    validation:fileFieldValidation.image,
-    storageApproach:StorageApproachEnum.DISK,
-    maxSize:2 
+  cloudFileUpload({
+    validation: fileFieldValidation.image,
+    storageApproach: StorageApproachEnum.DISK,
+    maxSize: 2,
   }).single("attachment"),
   async (req: Request, res: Response, next: NextFunction) => {
-   const data=await userService.profileImage(req.file as Express.Multer.File, req.user);
+    const data = await userService.profileImage(
+      req.file as Express.Multer.File,
+      req.user,
+    );
+    return successResponse({
+      res,
+      data: data,
+    });
+  },
+);
+
+router.patch(
+  "/profile-cover-images",
+  authentication(TokenTypeEnum.ACCESS),
+  cloudFileUpload({
+    validation: fileFieldValidation.image,
+    storageApproach: StorageApproachEnum.DISK,
+    maxSize: 2,
+  }).fields([
+    { name: "attachments", maxCount: 2 },
+    { name: "attachment", maxCount: 2 },
+  ]),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const uploadedFiles = req.files as
+      | Record<string, Express.Multer.File[]>
+      | undefined;
+    const files = [
+      ...(uploadedFiles?.attachments ?? []),
+      ...(uploadedFiles?.attachment ?? []),
+    ];
+
+    const data = await userService.profileCoverImages(files, req.user);
     return successResponse({
       res,
       data: data,
