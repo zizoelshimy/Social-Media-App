@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import { successResponse } from "../../common/response";
 import UserService from "./user.service";
 import { authentication, authorization } from "../../middleware";
-import { StorageApproachEnum, TokenTypeEnum, UploadApproachEnum } from "../../common/enums";
+import { StorageApproachEnum, TokenTypeEnum } from "../../common/enums";
 import { endpoint } from "./user.authorization";
 import {
   cloudFileUpload,
@@ -28,20 +28,9 @@ router.get(
 router.patch(
   "/profile-image",
   authentication(TokenTypeEnum.ACCESS),
-  cloudFileUpload({
-    validation: fileFieldValidation.image,
-    storageApproach: StorageApproachEnum.DISK,
-    maxSize: 2,
-  }).single("attachment"),
   async (req: Request, res: Response, next: NextFunction) => {
-    const data = await userService.profileImage(
-      req.file as Express.Multer.File,
-      req.user,
-    );
-    return successResponse({
-      res,
-      data: data,
-    });
+    const data = await userService.profileImage(req.body, req.user);
+    return successResponse({res,data: data,});
   },
 );
 
@@ -109,4 +98,23 @@ router.post(
   },
 );
 
+/* router.patch(
+  "/profile-image",
+  authentication(TokenTypeEnum.ACCESS),
+  cloudFileUpload({
+    validation: fileFieldValidation.image,
+    storageApproach: StorageApproachEnum.DISK,
+    maxSize: 2,
+  }).single("attachment"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const data = await userService.profileImage(
+      req.file as Express.Multer.File,
+      req.user,
+    );
+    return successResponse({
+      res,
+      data: data,
+    });
+  },
+); */
 export default router;

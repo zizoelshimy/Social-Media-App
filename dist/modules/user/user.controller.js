@@ -19,16 +19,9 @@ router.get("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), 
         data,
     });
 });
-router.patch("/profile-image", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, multer_1.cloudFileUpload)({
-    validation: multer_1.fileFieldValidation.image,
-    storageApproach: enums_1.StorageApproachEnum.DISK,
-    maxSize: 2,
-}).single("attachment"), async (req, res, next) => {
-    const data = await userService.profileImage(req.file, req.user);
-    return (0, response_1.successResponse)({
-        res,
-        data: data,
-    });
+router.patch("/profile-image", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), async (req, res, next) => {
+    const data = await userService.profileImage(req.body, req.user);
+    return (0, response_1.successResponse)({ res, data: data, });
 });
 router.patch("/profile-cover-images", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, multer_1.cloudFileUpload)({
     validation: multer_1.fileFieldValidation.image,
@@ -67,4 +60,23 @@ router.post("/rotate-token", (0, middleware_1.authentication)(enums_1.TokenTypeE
         data: credentials,
     });
 });
+/* router.patch(
+  "/profile-image",
+  authentication(TokenTypeEnum.ACCESS),
+  cloudFileUpload({
+    validation: fileFieldValidation.image,
+    storageApproach: StorageApproachEnum.DISK,
+    maxSize: 2,
+  }).single("attachment"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const data = await userService.profileImage(
+      req.file as Express.Multer.File,
+      req.user,
+    );
+    return successResponse({
+      res,
+      data: data,
+    });
+  },
+); */
 exports.default = router;

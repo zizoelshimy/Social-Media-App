@@ -8,6 +8,7 @@ const exceptions_1 = require("../exceptions");
 const enums_1 = require("../enums");
 const node_fs_1 = require("node:fs");
 const lib_storage_1 = require("@aws-sdk/lib-storage");
+const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 class S3Service {
     client;
     constructor() {
@@ -15,18 +16,20 @@ class S3Service {
             region: config_1.AWS_REGION,
             credentials: {
                 accessKeyId: config_1.AWS_ACCESS_KEY_ID,
-                secretAccessKey: config_1.AWS_SECRET_ACCESS_KEY
-            }
+                secretAccessKey: config_1.AWS_SECRET_ACCESS_KEY,
+            },
         });
     }
     //this is for small file upload
-    async uploadAsset({ storageApproach = enums_1.StorageApproachEnum.MEMORY, Bucket, path = "general", file, ACL = client_s3_1.ObjectCannedACL.private, contentType }) {
+    async uploadAsset({ storageApproach = enums_1.StorageApproachEnum.MEMORY, Bucket, path = "general", file, ACL = client_s3_1.ObjectCannedACL.private, contentType, }) {
         const command = new client_s3_1.PutObjectCommand({
             Bucket,
             Key: `${config_1.APPLICATION_NAME}/${path}/${(0, node_crypto_1.randomUUID)()}__${file.originalname}`,
             ACL,
-            Body: storageApproach === enums_1.StorageApproachEnum.MEMORY ? file.buffer : (0, node_fs_1.createReadStream)(file.path),
-            ContentType: file.mimetype || contentType
+            Body: storageApproach === enums_1.StorageApproachEnum.MEMORY
+                ? file.buffer
+                : (0, node_fs_1.createReadStream)(file.path),
+            ContentType: file.mimetype || contentType,
         });
         if (!command.input?.Key) {
             throw new exceptions_1.BadRequestException("Failed to upload asset");
@@ -35,15 +38,17 @@ class S3Service {
         return command.input.Key;
     }
     //this is for large file upload using multipart upload
-    async uploadLargeAsset({ storageApproach = enums_1.StorageApproachEnum.DISK, Bucket, path = "general", file, ACL = client_s3_1.ObjectCannedACL.private, contentType, partSize = 5 }) {
+    async uploadLargeAsset({ storageApproach = enums_1.StorageApproachEnum.DISK, Bucket, path = "general", file, ACL = client_s3_1.ObjectCannedACL.private, contentType, partSize = 5, }) {
         const uploadFile = new lib_storage_1.Upload({
             client: this.client,
             params: {
                 Bucket,
                 Key: `${config_1.APPLICATION_NAME}/${path}/${(0, node_crypto_1.randomUUID)()}__${file.originalname}`,
                 ACL,
-                Body: storageApproach === enums_1.StorageApproachEnum.MEMORY ? file.buffer : (0, node_fs_1.createReadStream)(file.path),
-                ContentType: file.mimetype || contentType
+                Body: storageApproach === enums_1.StorageApproachEnum.MEMORY
+                    ? file.buffer
+                    : (0, node_fs_1.createReadStream)(file.path),
+                ContentType: file.mimetype || contentType,
             },
             partSize: partSize * 1024 * 1024, //5mb
         });
@@ -53,7 +58,7 @@ class S3Service {
         });
         return await uploadFile.done();
     }
-    async uploadAssets({ storageApproach = enums_1.StorageApproachEnum.MEMORY, uploadApproach = enums_1.UploadApproachEnum.SMALL, Bucket, path = "general", files, ACL = client_s3_1.ObjectCannedACL.private, contentType }) {
+    async uploadAssets({ storageApproach = enums_1.StorageApproachEnum.MEMORY, uploadApproach = enums_1.UploadApproachEnum.SMALL, Bucket, path = "general", files, ACL = client_s3_1.ObjectCannedACL.private, contentType, }) {
         let urls = [];
         if (uploadApproach === enums_1.UploadApproachEnum.LARGE) {
             const data = await Promise.all(files.map((file) => {
@@ -63,10 +68,10 @@ class S3Service {
                     ACL,
                     Bucket,
                     path,
-                    contentType
+                    contentType,
                 });
             }));
-            urls = data.map(ele => ele.Key);
+            urls = data.map((ele) => ele.Key);
         }
         else {
             urls = await Promise.all(files.map((file) => {
@@ -76,11 +81,23 @@ class S3Service {
                     ACL,
                     Bucket,
                     path,
-                    contentType
+                    contentType,
                 });
             }));
         }
         return urls;
+    }
+    async createPresignedUploadLink({ Bucket, path = "general", expiresIn = config_1.AWS_EXPIRES_IN, contentType, Originalname, }) {
+        const command = new client_s3_1.PutObjectCommand({
+            Bucket,
+            Key: `${config_1.APPLICATION_NAME}/${path}/${(0, node_crypto_1.randomUUID)()}__${Originalname}`,
+            ContentType: contentType,
+        });
+        if (!command.input?.Key) {
+            throw new exceptions_1.BadRequestException("Failed to upload asset");
+        }
+        const url = await (0, s3_request_presigner_1.getSignedUrl)(this.client, command, { expiresIn });
+        return { url, key: command.input.Key };
     }
 }
 exports.S3Service = S3Service;

@@ -57,17 +57,16 @@ class UserService {
         });
         return this.tokenService.createLoginCredentials(token, issuer);
     }
-    async profileImage(file, user) {
-        const { Key } = await this.s3.uploadLargeAsset({
-            file,
+    async profileImage({ contentType, OriginalName, }, user) {
+        const { url, key } = await this.s3.createPresignedUploadLink({
             Bucket: "c45nodeonlinesunday",
+            contentType,
+            Originalname: OriginalName,
             path: `Users/${user._id.toString()}/Profile`,
-            storageApproach: enums_1.StorageApproachEnum.DISK,
         });
-        user.profilePicture = Key;
+        user.profilePicture = key;
         await user.save();
-        console.log({ Key });
-        return user.toJSON();
+        return { user: user.toJSON(), url, key };
     }
     async profileCoverImages(files, user) {
         const urls = await this.s3.uploadAssets({
@@ -75,7 +74,7 @@ class UserService {
             files,
             path: `Users/${user._id.toString()}/Profile/Cover`,
             storageApproach: enums_1.StorageApproachEnum.DISK,
-            uploadApproach: enums_1.UploadApproachEnum.LARGE
+            uploadApproach: enums_1.UploadApproachEnum.LARGE,
         });
         user.profileCoverPictures = urls;
         await user.save();
