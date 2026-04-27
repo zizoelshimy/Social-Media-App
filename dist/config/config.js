@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.INSTRGRAM_LINK = exports.TWITTER_LINK = exports.FACEBOOK_LINK = exports.EMAIL_ALLOW_INVALID_CERT = exports.APPLICATION_NAME = exports.EMAIL_APP = exports.EMAIL_APP_PASSWORD = exports.GOOGLE_CLIENT_ID = exports.MAIL_TLS_REJECT_UNAUTHORIZED = exports.REDIS_URI = exports.REFRESH_TOKEN_EXPIRES_IN = exports.ACCESS_TOKEN_EXPIRES_IN = exports.SYSTEM_REFRESH_TOKEN_SIGNATURE = exports.SYSTEM_ACCESS_TOKEN_SIGNATURE = exports.USER_REFRESH_TOKEN_SIGNATURE = exports.USER_ACCESS_TOKEN_SIGNATURE = exports.ENC_KEY = exports.ENC_IV_LENGTH = exports.SALT_ROUND = exports.DB_URI = exports.PORT = void 0;
+exports.AWS_EXPIRES_IN = exports.AWS_SECRET_ACCESS_KEY = exports.AWS_ACCESS_KEY_ID = exports.AWS_BUCKET_NAME = exports.AWS_REGION = exports.INSTRGRAM_LINK = exports.TWITTER_LINK = exports.FACEBOOK_LINK = exports.EMAIL_ALLOW_INVALID_CERT = exports.APPLICATION_NAME = exports.EMAIL_APP = exports.EMAIL_APP_PASSWORD = exports.GOOGLE_CLIENT_ID = exports.MAIL_TLS_REJECT_UNAUTHORIZED = exports.REDIS_URI = exports.REFRESH_TOKEN_EXPIRES_IN = exports.ACCESS_TOKEN_EXPIRES_IN = exports.SYSTEM_REFRESH_TOKEN_SIGNATURE = exports.SYSTEM_ACCESS_TOKEN_SIGNATURE = exports.USER_REFRESH_TOKEN_SIGNATURE = exports.USER_ACCESS_TOKEN_SIGNATURE = exports.ENC_KEY = exports.ENC_IV_LENGTH = exports.SALT_ROUND = exports.DB_URI = exports.PORT = void 0;
 const dotenv_1 = require("dotenv");
 const node_path_1 = require("node:path");
 (0, dotenv_1.config)({ path: (0, node_path_1.resolve)(`./.env.${process.env.NODE_ENV}`) });
@@ -29,3 +29,8 @@ exports.EMAIL_ALLOW_INVALID_CERT = process.env.EMAIL_ALLOW_INVALID_CERT === "tru
 exports.FACEBOOK_LINK = process.env.FACEBOOK_LINK;
 exports.TWITTER_LINK = process.env.TWITTER_LINK;
 exports.INSTRGRAM_LINK = process.env.INSTRGRAM_LINK;
+exports.AWS_REGION = process.env.AWS_REGION;
+exports.AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME;
+exports.AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
+exports.AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+exports.AWS_EXPIRES_IN = parseInt(process.env.AWS_EXPIRES_IN ?? "120");

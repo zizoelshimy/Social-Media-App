@@ -1,17 +1,20 @@
 import { HydratedDocument } from "mongoose";
 import { IUser } from "../../common/interfaces";
 import { ConflictException, NotFoundException } from "../../common/exceptions";
-import { LogOutEnum } from "../../common/enums";
-import { RedisService, TokenService } from "../../common/services";
+import { LogOutEnum, StorageApproachEnum } from "../../common/enums";
+import { RedisService, S3Service, TokenService } from "../../common/services";
 import { REFRESH_TOKEN_EXPIRES_IN } from "../../config/config";
+
 
 
 class UserService {
     private readonly redis:RedisService
     private tokenService:TokenService
+    private readonly s3:S3Service
     constructor() {
         this.redis=new RedisService() 
         this.tokenService=new TokenService()
+        this.s3=new S3Service()
     }
    async profile(user: HydratedDocument<IUser>): Promise<any> {
     return user.toJSON()
@@ -57,6 +60,12 @@ async rotateToken  (token: HydratedDocument<IUser>, {sub,jti, iat}: { jti: strin
 
 }
 async profileImage(file:Express.Multer.File, user: HydratedDocument<IUser>): Promise<any> {
+  user.profilePicture =await this.s3.uploadAsset({
+    file,
+    Bucket: "c45nodeonlinesunday",
+    path: `Users/${user._id.toString()}/Profile`,
+  });
+  await user.save();
   return user.toJSON()
 }
 }

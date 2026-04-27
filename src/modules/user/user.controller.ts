@@ -26,15 +26,14 @@ router.patch(
   "/profile-image",
   authentication(TokenTypeEnum.ACCESS),
   cloudFileUpload({ 
-    storageApproach: StorageApproachEnum.DISK, 
     validation:fileFieldValidation.image,
     maxSize:2 
   }).single("attachment"),
   async (req: Request, res: Response, next: NextFunction) => {
-    await userService.profileImage(req.file as Express.Multer.File, req.user);
+   const data=await userService.profileImage(req.file as Express.Multer.File, req.user);
     return successResponse({
       res,
-      data: { file: req.file },
+      data: data,
     });
   },
 );

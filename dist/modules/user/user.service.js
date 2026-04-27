@@ -7,9 +7,11 @@ const config_1 = require("../../config/config");
 class UserService {
     redis;
     tokenService;
+    s3;
     constructor() {
         this.redis = new services_1.RedisService();
         this.tokenService = new services_1.TokenService();
+        this.s3 = new services_1.S3Service();
     }
     async profile(user) {
         return user.toJSON();
@@ -52,6 +54,12 @@ class UserService {
         ;
     }
     async profileImage(file, user) {
+        user.profilePicture = await this.s3.uploadAsset({
+            file,
+            Bucket: "c45nodeonlinesunday",
+            path: `Users/${user._id.toString()}/Profile`,
+        });
+        await user.save();
         return user.toJSON();
     }
 }

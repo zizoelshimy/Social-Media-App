@@ -1,0 +1,37 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.s3Service = exports.S3Service = void 0;
+const client_s3_1 = require("@aws-sdk/client-s3");
+const config_1 = require("../../config/config");
+const node_crypto_1 = require("node:crypto");
+const exceptions_1 = require("../exceptions");
+const enums_1 = require("../enums");
+const node_fs_1 = require("node:fs");
+class S3Service {
+    client;
+    constructor() {
+        this.client = new client_s3_1.S3Client({
+            region: config_1.AWS_REGION,
+            credentials: {
+                accessKeyId: config_1.AWS_ACCESS_KEY_ID,
+                secretAccessKey: config_1.AWS_SECRET_ACCESS_KEY
+            }
+        });
+    }
+    async uploadAsset({ storageApproach = enums_1.StorageApproachEnum.MEMORY, Bucket, path = "general", file, ACL = client_s3_1.ObjectCannedACL.private, contentType }) {
+        const command = new client_s3_1.PutObjectCommand({
+            Bucket,
+            Key: `${config_1.APPLICATION_NAME}/${path}/${(0, node_crypto_1.randomUUID)()}__${file.originalname}`,
+            ACL,
+            Body: storageApproach === enums_1.StorageApproachEnum.MEMORY ? file.buffer : (0, node_fs_1.createReadStream)(file.path),
+            ContentType: file.mimetype || contentType
+        });
+        if (!command.input?.Key) {
+            throw new exceptions_1.BadRequestException("Failed to upload asset");
+        }
+        await this.client.send(command);
+        return command.input.Key;
+    }
+}
+exports.S3Service = S3Service;
+exports.s3Service = new S3Service();
