@@ -21,6 +21,7 @@ router.get("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), 
 });
 router.patch("/profile-image", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, multer_1.cloudFileUpload)({
     validation: multer_1.fileFieldValidation.image,
+    storageApproach: enums_1.StorageApproachEnum.DISK,
     maxSize: 2
 }).single("attachment"), async (req, res, next) => {
     const data = await userService.profileImage(req.file, req.user);

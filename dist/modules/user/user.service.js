@@ -54,12 +54,15 @@ class UserService {
         ;
     }
     async profileImage(file, user) {
-        user.profilePicture = await this.s3.uploadAsset({
+        const { Key } = await this.s3.uploadLargeAsset({
             file,
             Bucket: "c45nodeonlinesunday",
             path: `Users/${user._id.toString()}/Profile`,
+            storageApproach: enums_1.StorageApproachEnum.DISK,
         });
+        user.profilePicture = Key;
         await user.save();
+        console.log({ Key });
         return user.toJSON();
     }
 }

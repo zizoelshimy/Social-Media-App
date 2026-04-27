@@ -1,9 +1,10 @@
-import {ObjectCannedACL, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
+import {CompleteMultipartUploadCommand, CompleteMultipartUploadCommandOutput, ObjectCannedACL, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import { APPLICATION_NAME, AWS_ACCESS_KEY_ID, AWS_REGION, AWS_SECRET_ACCESS_KEY } from "../../config/config";
 import { randomUUID } from "node:crypto";
 import { BadRequestException } from "../exceptions";
 import { StorageApproachEnum } from "../enums";
 import { createReadStream } from "node:fs";
+import { Upload } from "@aws-sdk/lib-storage";
 export class S3Service {
 
 
@@ -45,6 +46,42 @@ export class S3Service {
         await this.client.send(command);
         return command.input.Key;
 
+    }
+
+
+    async uploadLargeAsset({
+        storageApproach=StorageApproachEnum.DISK,
+        Bucket,
+        path="general",
+        file,
+        ACL=ObjectCannedACL.private,
+        contentType,
+        partSize=5
+    }:{
+        storageApproach?:StorageApproachEnum,
+        Bucket:string,
+        path:string,
+        file:Express.Multer.File
+        ACL?:ObjectCannedACL,
+        contentType?:string,
+        partSize?:number
+    }):Promise<CompleteMultipartUploadCommandOutput> {
+       const uploadFile =new Upload({
+        client:this.client,
+        params:{
+            Bucket,
+            Key:`${APPLICATION_NAME}/${path}/${randomUUID()}__${file.originalname}`,
+            ACL,
+            Body:storageApproach === StorageApproachEnum.MEMORY ? file.buffer :createReadStream(file.path),
+            ContentType:file.mimetype || contentType
+       },
+       partSize:partSize*1024*1024, //5mb
+       })
+       uploadFile.on("httpUploadProgress", (progress) => {
+        console.log(progress)
+        console.log(`File Upload is ${((progress.loaded as number)/(progress.total as number))*100}% done`) //this is for  tell me the progress of the upload in percentage
+       });
+        return await uploadFile.done();
     }
 }
 export const s3Service = new S3Service()

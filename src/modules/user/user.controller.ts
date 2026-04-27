@@ -27,6 +27,7 @@ router.patch(
   authentication(TokenTypeEnum.ACCESS),
   cloudFileUpload({ 
     validation:fileFieldValidation.image,
+    storageApproach:StorageApproachEnum.DISK,
     maxSize:2 
   }).single("attachment"),
   async (req: Request, res: Response, next: NextFunction) => {

@@ -60,12 +60,15 @@ async rotateToken  (token: HydratedDocument<IUser>, {sub,jti, iat}: { jti: strin
 
 }
 async profileImage(file:Express.Multer.File, user: HydratedDocument<IUser>): Promise<any> {
-  user.profilePicture =await this.s3.uploadAsset({
+  const {Key} =await this.s3.uploadLargeAsset({
     file,
     Bucket: "c45nodeonlinesunday",
     path: `Users/${user._id.toString()}/Profile`,
+    storageApproach: StorageApproachEnum.DISK,
   });
+  user.profilePicture=Key as string;
   await user.save();
+  console.log({Key})
   return user.toJSON()
 }
 }
