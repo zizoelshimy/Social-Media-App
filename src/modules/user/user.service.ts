@@ -84,6 +84,7 @@ class UserService {
     }: { contentType: string; OriginalName: string },
     user: HydratedDocument<IUser>,
   ): Promise<{ user: IUser; url: string; key: string }> {
+    const oldPic= user.profilePicture
     const { url, key } = await this.s3.createPresignedUploadLink({
       Bucket: AWS_BUCKET_NAME,
       contentType,
@@ -92,6 +93,9 @@ class UserService {
     });
     user.profilePicture = key;
     await user.save();
+      if(oldPic){
+        await this.s3.deleteAsset({ Key: oldPic })
+      }
     return { user: user.toJSON(), url, key };
   }
 
@@ -99,6 +103,7 @@ class UserService {
     files: Express.Multer.File[],
     user: HydratedDocument<IUser>,
   ): Promise<any> {
+    const oldUrls = user.profileCoverPictures || []
     const urls = await this.s3.uploadAssets({
       Bucket: AWS_BUCKET_NAME,
       files,
@@ -108,6 +113,9 @@ class UserService {
     });
     user.profileCoverPictures = urls;
     await user.save();
+    if(oldUrls?.length){
+      await this.s3.deleteAssets({ Keys: oldUrls.map(url=>({Key:url})) })
+    }
     return user.toJSON();
   }
 }

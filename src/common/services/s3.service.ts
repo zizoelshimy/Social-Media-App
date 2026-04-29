@@ -1,5 +1,9 @@
 import {
   CompleteMultipartUploadCommandOutput,
+  DeleteObjectCommand,
+  DeleteObjectCommandOutput,
+  DeleteObjectsCommand,
+  DeleteObjectsCommandOutput,
   GetObjectCommand,
   GetObjectCommandOutput,
   ObjectCannedACL,
@@ -213,6 +217,38 @@ export class S3Service {
     const command = new GetObjectCommand({
       Bucket,
       Key,
+    });
+    return await this.client.send(command);
+  }
+  //delete asset from s3
+    async deleteAsset({
+    Bucket =AWS_BUCKET_NAME,
+    Key,
+  }: {
+    Bucket?: string;
+    Key: string;
+  }): Promise<DeleteObjectCommandOutput> {
+    const command = new DeleteObjectCommand({
+      Bucket,
+      Key,
+    });
+    return await this.client.send(command);
+  }
+
+
+  async deleteAssets({
+    Bucket =AWS_BUCKET_NAME,
+    Keys,
+  }: {
+    Bucket?: string;
+    Keys: { Key: string }[];
+  }): Promise<DeleteObjectsCommandOutput> {
+    const command = new DeleteObjectsCommand({
+      Bucket,
+      Delete:{
+        Objects: Keys,
+        Quiet: false
+      },
     });
     return await this.client.send(command);
   }

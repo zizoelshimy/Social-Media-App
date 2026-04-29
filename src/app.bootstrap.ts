@@ -47,8 +47,7 @@ const s3WriteStream = promisify(pipeline)
   const Key = path.join("/")
   const url = await s3Service.createPresignedFethcLink({ Key,download, fileName  })
    return successResponse({res,data: {url}}) 
- )
-
+})
 
        app.get("/*dummy",(req:express.Request,res:express.Response,next:express.NextFunction)=>{
        res.status(404).json({message:"invalid routing"})

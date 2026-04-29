@@ -58,6 +58,7 @@ class UserService {
         return this.tokenService.createLoginCredentials(token, issuer);
     }
     async profileImage({ contentType, OriginalName, }, user) {
+        const oldPic = user.profilePicture;
         const { url, key } = await this.s3.createPresignedUploadLink({
             Bucket: config_1.AWS_BUCKET_NAME,
             contentType,
@@ -66,9 +67,13 @@ class UserService {
         });
         user.profilePicture = key;
         await user.save();
+        if (oldPic) {
+            await this.s3.deleteAsset({ Key: oldPic });
+        }
         return { user: user.toJSON(), url, key };
     }
     async profileCoverImages(files, user) {
+        const oldUrls = user.profileCoverPictures || [];
         const urls = await this.s3.uploadAssets({
             Bucket: config_1.AWS_BUCKET_NAME,
             files,
@@ -78,6 +83,9 @@ class UserService {
         });
         user.profileCoverPictures = urls;
         await user.save();
+        if (oldUrls?.length) {
+            await this.s3.deleteAssets({ Keys: oldUrls.map(url => ({ Key: url })) });
+        }
         return user.toJSON();
     }
 }
