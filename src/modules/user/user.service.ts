@@ -7,7 +7,7 @@ import {
   UploadApproachEnum,
 } from "../../common/enums";
 import { RedisService, S3Service, TokenService } from "../../common/services";
-import { REFRESH_TOKEN_EXPIRES_IN } from "../../config/config";
+import { AWS_BUCKET_NAME, REFRESH_TOKEN_EXPIRES_IN } from "../../config/config";
 
 class UserService {
   private readonly redis: RedisService;
@@ -83,9 +83,9 @@ class UserService {
       OriginalName,
     }: { contentType: string; OriginalName: string },
     user: HydratedDocument<IUser>,
-  ): Promise<{ user:IUser; url: string; key: string }> {
+  ): Promise<{ user: IUser; url: string; key: string }> {
     const { url, key } = await this.s3.createPresignedUploadLink({
-      Bucket: "c45nodeonlinesunday",
+      Bucket: AWS_BUCKET_NAME,
       contentType,
       Originalname: OriginalName,
       path: `Users/${user._id.toString()}/Profile`,
@@ -100,7 +100,7 @@ class UserService {
     user: HydratedDocument<IUser>,
   ): Promise<any> {
     const urls = await this.s3.uploadAssets({
-      Bucket: "c45nodeonlinesunday",
+      Bucket: AWS_BUCKET_NAME,
       files,
       path: `Users/${user._id.toString()}/Profile/Cover`,
       storageApproach: StorageApproachEnum.DISK,

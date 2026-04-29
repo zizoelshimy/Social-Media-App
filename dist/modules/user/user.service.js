@@ -59,7 +59,7 @@ class UserService {
     }
     async profileImage({ contentType, OriginalName, }, user) {
         const { url, key } = await this.s3.createPresignedUploadLink({
-            Bucket: "c45nodeonlinesunday",
+            Bucket: config_1.AWS_BUCKET_NAME,
             contentType,
             Originalname: OriginalName,
             path: `Users/${user._id.toString()}/Profile`,
@@ -70,7 +70,7 @@ class UserService {
     }
     async profileCoverImages(files, user) {
         const urls = await this.s3.uploadAssets({
-            Bucket: "c45nodeonlinesunday",
+            Bucket: config_1.AWS_BUCKET_NAME,
             files,
             path: `Users/${user._id.toString()}/Profile/Cover`,
             storageApproach: enums_1.StorageApproachEnum.DISK,

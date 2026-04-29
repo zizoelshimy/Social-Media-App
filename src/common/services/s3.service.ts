@@ -1,5 +1,7 @@
 import {
   CompleteMultipartUploadCommandOutput,
+  GetObjectCommand,
+  GetObjectCommandOutput,
   ObjectCannedACL,
   PutObjectCommand,
   S3Client,
@@ -7,6 +9,7 @@ import {
 import {
   APPLICATION_NAME,
   AWS_ACCESS_KEY_ID,
+  AWS_BUCKET_NAME,
   AWS_EXPIRES_IN,
   AWS_REGION,
   AWS_SECRET_ACCESS_KEY,
@@ -17,6 +20,7 @@ import { StorageApproachEnum, UploadApproachEnum } from "../enums";
 import { createReadStream } from "node:fs";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 export class S3Service {
   private client: S3Client;
   constructor() {
@@ -175,6 +179,42 @@ export class S3Service {
     const url = await getSignedUrl(this.client, command, { expiresIn });
 
     return { url, key: command.input.Key };
+  }
+ async createPresignedFethcLink({
+    Bucket= AWS_BUCKET_NAME,
+    Key ,
+    expiresIn = AWS_EXPIRES_IN,
+    fileName,
+    download 
+  }: {
+    Bucket?: string;
+    Key: string;
+    expiresIn?: number;
+    fileName?: string;
+    download?: string;
+  }): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket,
+      Key,
+      ResponseContentDisposition:download === "true" ? `attachment; filename="${fileName || Key.split("/").pop()}"` : undefined, // only app
+    });
+    const url = await getSignedUrl(this.client, command, { expiresIn });
+    return url;
+  }
+
+
+  async getAssets({
+    Bucket =AWS_BUCKET_NAME,
+    Key,
+  }: {
+    Bucket?: string;
+    Key: string;
+  }): Promise<GetObjectCommandOutput> {
+    const command = new GetObjectCommand({
+      Bucket,
+      Key,
+    });
+    return await this.client.send(command);
   }
 }
 export const s3Service = new S3Service();
