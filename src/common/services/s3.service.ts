@@ -6,6 +6,8 @@ import {
   DeleteObjectsCommandOutput,
   GetObjectCommand,
   GetObjectCommandOutput,
+  ListObjectsV2Command,
+  ListObjectsV2CommandOutput,
   ObjectCannedACL,
   PutObjectCommand,
   S3Client,
@@ -251,6 +253,32 @@ export class S3Service {
       },
     });
     return await this.client.send(command);
+  }
+
+  async listFolderDir({
+    Bucket =AWS_BUCKET_NAME,
+    prefix,
+  }: {
+    Bucket?: string;
+    prefix: string;
+  }): Promise<ListObjectsV2CommandOutput> {
+    const command = new ListObjectsV2Command({
+      Bucket,
+      Prefix:`${APPLICATION_NAME}/${prefix}`,
+    });
+    return await this.client.send(command);
+  }
+
+  async deleteFolderByPrefix({
+    Bucket =AWS_BUCKET_NAME,
+    prefix,
+  }: {
+    Bucket?: string;
+    prefix: string;
+  }): Promise<DeleteObjectCommandOutput> {
+    const result = await this.listFolderDir({ Bucket, prefix });
+    const keys = result.Contents?.map((item) => ({ Key: item.Key as string })) || []; // this is to get the keys of the objects in the folder as s3 does not have the concept of folder but it has the concept of prefix and we can use the prefix to delete all the objects in the folder
+    return await this.deleteAssets({ Bucket, Keys: keys });
   }
 }
 export const s3Service = new S3Service();

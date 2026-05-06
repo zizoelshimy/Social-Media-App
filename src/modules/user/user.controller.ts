@@ -98,6 +98,15 @@ router.post(
   },
 );
 
+router.delete(
+  "/",
+  authentication(TokenTypeEnum.ACCESS),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const data = await userService.deleteProfile(req.user);
+    return successResponse({res,data: data});
+  },
+);
+
 /* router.patch(
   "/profile-image",
   authentication(TokenTypeEnum.ACCESS),

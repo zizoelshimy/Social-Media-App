@@ -4,14 +4,17 @@ const exceptions_1 = require("../../common/exceptions");
 const enums_1 = require("../../common/enums");
 const services_1 = require("../../common/services");
 const config_1 = require("../../config/config");
+const repository_1 = require("../../DB/repository");
 class UserService {
     redis;
     tokenService;
     s3;
+    userRepository;
     constructor() {
         this.redis = new services_1.RedisService();
         this.tokenService = new services_1.TokenService();
         this.s3 = new services_1.S3Service();
+        this.userRepository = new repository_1.UserRepository();
     }
     async profile(user) {
         return user.toJSON();
@@ -87,6 +90,14 @@ class UserService {
             await this.s3.deleteAssets({ Keys: oldUrls.map(url => ({ Key: url })) });
         }
         return user.toJSON();
+    }
+    async deleteProfile(user) {
+        const account = await this.userRepository.deleteOne({ filter: { _id: user._id, force: true } });
+        if (!account.deletedCount) {
+            throw new exceptions_1.NotFoundException("account not found");
+        }
+        await this.s3.deleteFolderByPrefix({ prefix: `Users/${user._id.toString()}` });
+        return account;
     }
 }
 exports.default = UserService;

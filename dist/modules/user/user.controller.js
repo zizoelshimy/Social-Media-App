@@ -60,6 +60,10 @@ router.post("/rotate-token", (0, middleware_1.authentication)(enums_1.TokenTypeE
         data: credentials,
     });
 });
+router.delete("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), async (req, res, next) => {
+    const data = await userService.deleteProfile(req.user);
+    return (0, response_1.successResponse)({ res, data: data });
+});
 /* router.patch(
   "/profile-image",
   authentication(TokenTypeEnum.ACCESS),

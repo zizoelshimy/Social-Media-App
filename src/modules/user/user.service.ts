@@ -8,15 +8,18 @@ import {
 } from "../../common/enums";
 import { RedisService, S3Service, TokenService } from "../../common/services";
 import { AWS_BUCKET_NAME, REFRESH_TOKEN_EXPIRES_IN } from "../../config/config";
+import { UserRepository } from "../../DB/repository";
 
 class UserService {
   private readonly redis: RedisService;
   private tokenService: TokenService;
   private readonly s3: S3Service;
+  private readonly userRepository: UserRepository
   constructor() {
     this.redis = new RedisService();
     this.tokenService = new TokenService();
     this.s3 = new S3Service();
+    this.userRepository = new UserRepository()
   }
   async profile(user: HydratedDocument<IUser>): Promise<any> {
     return user.toJSON();
@@ -117,6 +120,16 @@ class UserService {
       await this.s3.deleteAssets({ Keys: oldUrls.map(url=>({Key:url})) })
     }
     return user.toJSON();
+  }
+
+
+    async deleteProfile(user: HydratedDocument<IUser>,) {
+      const account = await this.userRepository.deleteOne({filter:{_id: user._id,force:true}})
+      if (!account.deletedCount){
+      throw new NotFoundException("account not found")
+      }
+      await this.s3.deleteFolderByPrefix({prefix:`Users/${user._id.toString()}`})
+      return account
   }
 }
 export default UserService;

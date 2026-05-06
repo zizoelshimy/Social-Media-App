@@ -133,6 +133,18 @@ class S3Service {
         });
         return await this.client.send(command);
     }
+    async listFolderDir({ Bucket = config_1.AWS_BUCKET_NAME, prefix, }) {
+        const command = new client_s3_1.ListObjectsV2Command({
+            Bucket,
+            Prefix: `${config_1.APPLICATION_NAME}/${prefix}`,
+        });
+        return await this.client.send(command);
+    }
+    async deleteFolderByPrefix({ Bucket = config_1.AWS_BUCKET_NAME, prefix, }) {
+        const result = await this.listFolderDir({ Bucket, prefix });
+        const keys = result.Contents?.map((item) => ({ Key: item.Key })) || []; // this is to get the keys of the objects in the folder as s3 does not have the concept of folder but it has the concept of prefix and we can use the prefix to delete all the objects in the folder
+        return await this.deleteAssets({ Bucket, Keys: keys });
+    }
 }
 exports.S3Service = S3Service;
 exports.s3Service = new S3Service();
