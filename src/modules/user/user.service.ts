@@ -87,18 +87,18 @@ class UserService {
     }: { contentType: string; OriginalName: string },
     user: HydratedDocument<IUser>,
   ): Promise<{ user: IUser; url: string; key: string }> {
-    const oldPic= user.profilePicture
+    //const oldPic= user.profilePicture
     const { url, key } = await this.s3.createPresignedUploadLink({
       Bucket: AWS_BUCKET_NAME,
       contentType,
       Originalname: OriginalName,
       path: `Users/${user._id.toString()}/Profile`,
     });
-    user.profilePicture = key;
+   /*  user.profilePicture = key;
     await user.save();
       if(oldPic){
         await this.s3.deleteAsset({ Key: oldPic })
-      }
+      } */
     return { user: user.toJSON(), url, key };
   }
 
