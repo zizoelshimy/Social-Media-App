@@ -22,3 +22,10 @@ The app currently exposes authentication endpoints and is structured to expand w
 - MongoDB + Mongoose
 - Zod (validation)
 - dotenv (environment configuration)
+
+## Firebase Admin (FCM)
+
+This project can send push notifications via Firebase Cloud Messaging.
+
+- Set `FIREBASE_SERVICE_ACCOUNT_PATH` (or `GOOGLE_APPLICATION_CREDENTIALS`) to the path of your Firebase service-account JSON.
+- Do not commit service-account JSON files to git.
