@@ -22,6 +22,17 @@ const bootstrap = async () => {
     app.get("/", (req, res, next) => {
         res.status(200).json({ message: "Welcome to Social Media App" });
     });
+    /*    app.post("/send-notification",async (req:Request,res:Response,next:NextFunction):Promise<express.Response>=>{
+         console.log({token:req.body.token})
+         await notificationService.sendNotification({
+           token:req.body.token,
+           data:{
+             title:"Hello from Social Media App",
+             body:"This is a test notification"
+           }
+         })
+         return res.status(200).json({message:"Welcome to Social Media App"})
+       }) */
     //applying routing
     app.use("/auth", modules_1.authRouter);
     app.use("/user", modules_1.userRouter);

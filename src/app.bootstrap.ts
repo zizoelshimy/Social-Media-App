@@ -6,7 +6,7 @@ import { PORT } from "./config/config";
 import connectDB from "./DB/connection.db";
 import redisService from "./common/services/redis.service";
 import cors from "cors";
-import { s3Service } from "./common/services";
+import { notificationService, s3Service } from "./common/services";
 import("./DB/repository/base.repository.js")
 import {pipeline} from 'node:stream'
 import { promisify } from "node:util";
@@ -18,6 +18,18 @@ const s3WriteStream = promisify(pipeline)
     app.get("/",(req:Request,res:Response,next:NextFunction)=>{
        res.status(200).json({message:"Welcome to Social Media App"})
     })
+
+ /*    app.post("/send-notification",async (req:Request,res:Response,next:NextFunction):Promise<express.Response>=>{
+      console.log({token:req.body.token}) 
+      await notificationService.sendNotification({
+        token:req.body.token,
+        data:{
+          title:"Hello from Social Media App",
+          body:"This is a test notification"
+        } 
+      })
+      return res.status(200).json({message:"Welcome to Social Media App"})
+    }) */
     //applying routing
     app.use("/auth",authRouter)
     app.use("/user",userRouter)

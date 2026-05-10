@@ -90,7 +90,7 @@ router.post("/signup/gmail", async (req, res, next) => {
         });
     }
     catch (error) {
-        next(error);
+        return next(error);
     }
 });
 exports.default = router;

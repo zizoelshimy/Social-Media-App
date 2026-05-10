@@ -140,6 +140,24 @@ class RedisService {
             return 0;
         }
     };
+    FCM_key(userId) {
+        return `user:FCM:${userId.toString()}`;
+    }
+    async addFCM(userId, FCMToken) {
+        return await this.client.sAdd(this.FCM_key(userId), FCMToken);
+    }
+    async removeFCM(userId, FCMToken) {
+        return await this.client.sRem(this.FCM_key(userId), FCMToken);
+    }
+    async getFCMs(userId) {
+        return await this.client.sMembers(this.FCM_key(userId));
+    }
+    async hasFCMs(userId) {
+        return await this.client.sCard(this.FCM_key(userId));
+    }
+    async removeFCMUser(userId) {
+        return await this.client.del(this.FCM_key(userId));
+    }
 }
 exports.RedisService = RedisService;
 const redisService = new RedisService();

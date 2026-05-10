@@ -164,6 +164,28 @@ revokeTokenKey = ({ userId, jti }: { userId: Types.ObjectId | string; jti: strin
         return 0;  
     }
 }
+ FCM_key(userId: Types.ObjectId | string): string {
+    return `user:FCM:${userId.toString()}`;
+}
+async  addFCM(userId:Types.ObjectId | string , FCMToken:string) {
+    return await this.client.sAdd(this.FCM_key(userId), FCMToken);
+}
+
+ async  removeFCM(userId:Types.ObjectId | string, FCMToken:string) {
+    return await this.client.sRem(this.FCM_key(userId), FCMToken);
+}
+
+ async  getFCMs(userId:Types.ObjectId | string) {
+    return await this.client.sMembers(this.FCM_key(userId));
+}
+ async  hasFCMs(userId:Types.ObjectId | string) {
+    return await this.client.sCard(this.FCM_key(userId));
+}
+
+ async  removeFCMUser(userId:Types.ObjectId | string) {
+    return await this.client.del(this.FCM_key(userId));
+}
+
 }
 const redisService = new RedisService()
 export default redisService

@@ -75,7 +75,7 @@ router.post("/signup/gmail", async (req, res, next) => {
       data: { ...Credentials },
     });
   } catch (error) {
-    next(error);
+    return next(error);
   }
 });
 export default router;

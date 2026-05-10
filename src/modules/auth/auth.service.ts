@@ -13,7 +13,7 @@ import {
 } from "../../common/exceptions";
 import { generateHash } from "../../common/utils/security";
 import { emailEvent, emailTemplate, sendEmail } from "../../common/utils/email";
-import { RedisService } from "../../common/services";
+import { NotificationService, notificationService, RedisService } from "../../common/services";
 import redisService from "../../common/services/redis.service";
 import { EmailEnum, ProviderEnum } from "../../common/enums";
 import { createRandomOtp } from "../../common/utils/otp";
@@ -28,17 +28,20 @@ export class AuthenticationService {
   private readonly tokenService: TokenService;
   private readonly maxOtpAttempts = 3;
   private readonly otpBlockTtlSeconds = 7 * 60;
+  private readonly notificationService:NotificationService
   constructor() {
     this.userRepository = new UserRepository();
     this.redis = redisService;
     this.tokenService = new TokenService();
+    this.notificationService = notificationService;
   }
   public async login(
     inputs: LoginDto,
     issuer: string,
+
   ): Promise<{ access_token: string; refresh_token: string }> {
     {
-      const { email, password } = inputs;
+      const { email, password , FCM} = inputs;
       const user = await this.userRepository.findOne({
         filter: {
           email,
@@ -56,6 +59,15 @@ export class AuthenticationService {
         }))
       ) {
         throw new NotFoundException("Invalid email or password");
+      }
+      if(FCM){
+
+       await this.redis.addFCM(user._id, FCM)
+      const tokens = await this.redis.getFCMs(user._id)
+      if (tokens?.length){
+      await this.notificationService.sendNotifications({tokens, data: {title: "Welcome", body: `You have successfully logged at ${new Date()}`}})
+      }
+
       }
       return await this.tokenService.createLoginCredentials(user, issuer);
     }

@@ -18,6 +18,7 @@ export const login = {
     .strictObject({
       email: generalValidationFields.email,
       password: generalValidationFields.password,
+      FCM:z.string().optional(),
     })
     .catchall(z.string()),
 };

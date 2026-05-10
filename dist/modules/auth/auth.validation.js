@@ -18,6 +18,7 @@ exports.login = {
         .strictObject({
         email: validation_1.generalValidationFields.email,
         password: validation_1.generalValidationFields.password,
+        FCM: zod_1.z.string().optional(),
     })
         .catchall(zod_1.z.string()),
 };

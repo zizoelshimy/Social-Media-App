@@ -1,3 +1,9 @@
 node_modules/
 .env
 .env.*
+
+# Firebase / Google service account credentials
+src/config/*firebase-adminsdk*.json
+src/config/*adminsdk*.json
+dist/config/*firebase-adminsdk*.json
+dist/config/*adminsdk*.json

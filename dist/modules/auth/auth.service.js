@@ -8,6 +8,7 @@ const repository_1 = require("../../DB/repository");
 const exceptions_1 = require("../../common/exceptions");
 const security_1 = require("../../common/utils/security");
 const email_1 = require("../../common/utils/email");
+const services_1 = require("../../common/services");
 const redis_service_1 = __importDefault(require("../../common/services/redis.service"));
 const enums_1 = require("../../common/enums");
 const otp_1 = require("../../common/utils/otp");
@@ -21,14 +22,16 @@ class AuthenticationService {
     tokenService;
     maxOtpAttempts = 3;
     otpBlockTtlSeconds = 7 * 60;
+    notificationService;
     constructor() {
         this.userRepository = new repository_1.UserRepository();
         this.redis = redis_service_1.default;
         this.tokenService = new token_servic_1.TokenService();
+        this.notificationService = services_1.notificationService;
     }
     async login(inputs, issuer) {
         {
-            const { email, password } = inputs;
+            const { email, password, FCM } = inputs;
             const user = await this.userRepository.findOne({
                 filter: {
                     email,
@@ -44,6 +47,13 @@ class AuthenticationService {
                 ciphertext: user.password,
             }))) {
                 throw new exceptions_1.NotFoundException("Invalid email or password");
+            }
+            if (FCM) {
+                await this.redis.addFCM(user._id, FCM);
+                const tokens = await this.redis.getFCMs(user._id);
+                if (tokens?.length) {
+                    await this.notificationService.sendNotifications({ tokens, data: { title: "Welcome", body: `You have successfully logged at ${new Date()}` } });
+                }
             }
             return await this.tokenService.createLoginCredentials(user, issuer);
         }
