@@ -13,6 +13,8 @@ import {
   NotFoundException,
 } from "../../common/exceptions";
 import { randomUUID } from "node:crypto";
+import { AvailabilityEnum } from "../../common/enums";
+import { getAvailability } from "../../common/utils/post";
 export class PostService {
   private userRepository: UserRepository;
   private readonly redis: RedisService;
@@ -87,6 +89,17 @@ export class PostService {
       });
     }
     return post.toJSON();
+  }
+
+
+  async postList(
+    user: HydratedDocument<IUser>): Promise<IPost[]> {
+    const posts = await this.postRepository.find({
+        filter: {
+            $or:getAvailability(user)
+        }
+    })
+    return posts
   }
 }
 export const postService = new PostService();

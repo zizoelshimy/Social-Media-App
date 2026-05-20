@@ -10,6 +10,7 @@ const services_1 = require("../../common/services");
 const redis_service_1 = __importDefault(require("../../common/services/redis.service"));
 const exceptions_1 = require("../../common/exceptions");
 const node_crypto_1 = require("node:crypto");
+const post_1 = require("../../common/utils/post");
 class PostService {
     userRepository;
     redis;
@@ -80,6 +81,14 @@ class PostService {
             });
         }
         return post.toJSON();
+    }
+    async postList(user) {
+        const posts = await this.postRepository.find({
+            filter: {
+                $or: (0, post_1.getAvailability)(user)
+            }
+        });
+        return posts;
     }
 }
 exports.PostService = PostService;

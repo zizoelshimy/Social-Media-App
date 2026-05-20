@@ -18,4 +18,13 @@ return successResponse({res,message:"Post created successfully",data})
 }
 )
 
+router.get("/",
+    authentication(TokenTypeEnum.ACCESS),
+
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const data=await postService.postList(req.user)
+return successResponse({res,message:"Posts retrieved successfully",data})
+}
+)
+
 export default router

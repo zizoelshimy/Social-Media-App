@@ -45,4 +45,8 @@ router.post("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS),
     const data = await post_service_1.postService.createPost({ ...req.body, files: req.files }, req.user);
     return (0, response_1.successResponse)({ res, message: "Post created successfully", data });
 });
+router.get("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), async (req, res, next) => {
+    const data = await post_service_1.postService.postList(req.user);
+    return (0, response_1.successResponse)({ res, message: "Posts retrieved successfully", data });
+});
 exports.default = router;

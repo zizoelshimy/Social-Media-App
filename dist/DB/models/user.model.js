@@ -17,6 +17,7 @@ const userSchema = new mongoose_1.Schema({
     phone: { type: String },
     profilePicture: { type: String },
     profileCoverPictures: { type: [String] },
+    friends: [{ type: mongoose_1.Types.ObjectId, ref: "User" }],
     gender: { type: Number, enum: enums_1.GenderEnum, default: enums_1.GenderEnum.MALE },
     role: { type: Number, enum: enums_1.RoleEnum, default: enums_1.RoleEnum.USER },
     provider: { type: Number, enum: enums_1.ProviderEnum, default: enums_1.ProviderEnum.SYSTEM },
