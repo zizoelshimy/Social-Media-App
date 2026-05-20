@@ -10,11 +10,10 @@ class DataBaseRepository {
         return await this.model.create(data, options);
     }
     async insertMany({ data, }) {
-        return await this.model.insertMany(data);
+        return (await this.model.insertMany(data));
     }
     async createOne({ data, options, }) {
-        const [doc] = await this.create({ data: [data], options });
-        return doc;
+        return (await this.create({ data, options }));
     }
     //what is HydratedDocument because we want to return a mongoose document that has all the methods of a mongoose document and what is raw doc because we want to return a plain js object that has all the properties of a mongoose document but without the methods of a mongoose document
     //implementation of findOne
@@ -38,16 +37,16 @@ class DataBaseRepository {
         return await doc.exec();
     }
     //update
-    async updateOne({ filter, update, options }) {
+    async updateOne({ filter, update, options, }) {
         return await this.model.updateOne(filter, update, options);
     }
-    async findOneAndUpdate({ filter, update, options = { new: true } }) {
+    async findOneAndUpdate({ filter, update, options = { new: true }, }) {
         return await this.model.findByIdAndUpdate(filter, { ...update, $inc: { __v: 1 } }, options); //to increment the version key by 1 every time we update the document to prevent concurrent updates and to know how many times the document has been updated
     }
-    async findByIdAndUpdate({ _id, update, options = { new: true } }) {
+    async findByIdAndUpdate({ _id, update, options = { new: true }, }) {
         return await this.model.findByIdAndUpdate(_id, update, options);
     }
-    async updateMany({ filter, update, options }) {
+    async updateMany({ filter, update, options, }) {
         return await this.model.updateMany(filter, update, options);
     }
     //delete

@@ -23,19 +23,20 @@ const bootstrap = async () => {
         res.status(200).json({ message: "Welcome to Social Media App" });
     });
     /*    app.post("/send-notification",async (req:Request,res:Response,next:NextFunction):Promise<express.Response>=>{
-         console.log({token:req.body.token})
-         await notificationService.sendNotification({
-           token:req.body.token,
-           data:{
-             title:"Hello from Social Media App",
-             body:"This is a test notification"
-           }
-         })
-         return res.status(200).json({message:"Welcome to Social Media App"})
-       }) */
+        console.log({token:req.body.token})
+        await notificationService.sendNotification({
+          token:req.body.token,
+          data:{
+            title:"Hello from Social Media App",
+            body:"This is a test notification"
+          }
+        })
+        return res.status(200).json({message:"Welcome to Social Media App"})
+      }) */
     //applying routing
     app.use("/auth", modules_1.authRouter);
     app.use("/user", modules_1.userRouter);
+    app.use("/post", modules_1.postRouter);
     app.get("/uploads/*path", async (req, res, next) => {
         const { download, fileName } = req.query;
         const { path } = req.params;
@@ -53,7 +54,11 @@ const bootstrap = async () => {
         const { download, fileName } = req.query;
         const { path } = req.params;
         const Key = path.join("/");
-        const url = await services_1.s3Service.createPresignedFethcLink({ Key, download, fileName });
+        const url = await services_1.s3Service.createPresignedFethcLink({
+            Key,
+            download,
+            fileName,
+        });
         return (0, response_1.successResponse)({ res, data: { url } });
     });
     app.get("/*dummy", (req, res, next) => {

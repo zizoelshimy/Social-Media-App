@@ -1,70 +1,67 @@
-
 import admin from "firebase-admin";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { promise } from "zod";
+
 export class NotificationService {
-    private client: admin.app.App
-    constructor() {
-        const defaultServiceAccountFileName =
-            "c45-onlime-app-firebase-adminsdk-fbsvc-be018ccef9.json";
+  private client: admin.app.App;
 
-        const explicitServiceAccountPath =
-            process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-            process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  constructor() {
+    const defaultServiceAccountFileName =
+      "c45-onlime-app-firebase-adminsdk-fbsvc-be018ccef9.json";
 
-        const candidatePaths = [
-            ...(explicitServiceAccountPath ? [explicitServiceAccountPath] : []),
-            resolve(process.cwd(), "dist", "config", defaultServiceAccountFileName),
-            resolve(process.cwd(), "src", "config", defaultServiceAccountFileName),
-        ];
+    const explicitServiceAccountPath =
+      process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
-        const serviceAccountPath = candidatePaths.find((p) => !!p && existsSync(p));
+    const candidatePaths = [
+      ...(explicitServiceAccountPath ? [explicitServiceAccountPath] : []),
+      resolve(process.cwd(), "dist", "config", defaultServiceAccountFileName),
+      resolve(process.cwd(), "src", "config", defaultServiceAccountFileName),
+    ];
 
-        if (!serviceAccountPath) {
-            throw new Error(
-                `Firebase service account JSON not found. Tried: ${candidatePaths.join(", ")}`,
-            );
-        }
+    const serviceAccountPath = candidatePaths.find((p) => !!p && existsSync(p));
 
-        const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
-
-        this.client = admin.apps.length
-            ? admin.app()
-            : admin.initializeApp({
-                  credential: admin.credential.cert(serviceAccount),
-              });
+    if (!serviceAccountPath) {
+      throw new Error(
+        `Firebase service account JSON not found. Tried: ${candidatePaths.join(", ")}`,
+      );
     }
-     async sendNotification( 
-           { 
-            token,
-            data
-        }:{
-            token:string,
-            data:{title:string, body:string}
-        }) {
-        const message={
-            token,
-            data,
-        }
-            
-        return await this.client.messaging().send(message)
-     }
 
+    const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
 
-       async sendNotifications( 
-           { 
-            tokens,
-            data
-        }:{
-            tokens:string[],
-            data:{title:string, body:string}
-        }) {
-        const message={
-            tokens,
-            data,
-        }
-        await Promise.allSettled(tokens.map(token=>this.sendNotification({token,data})))
-     }
+    this.client = admin.apps.length
+      ? admin.app()
+      : admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+        });
+  }
+
+  async sendNotification({
+    token,
+    data,
+  }: {
+    token: string;
+    data: { title: string; body: string };
+  }) {
+    const message = {
+      token,
+      data,
+    };
+
+    return await this.client.messaging().send(message);
+  }
+
+  async sendNotifications({
+    tokens,
+    data,
+  }: {
+    tokens: string[];
+    data: { title: string; body: string };
+  }) {
+    await Promise.allSettled(
+      tokens.map((token) => this.sendNotification({ token, data })),
+    );
+  }
 }
-export const notificationService = new NotificationService()
+
+export const notificationService = new NotificationService();

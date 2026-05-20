@@ -1,0 +1,42 @@
+import {z} from "zod"
+import { AvailabilityEnum } from "../../common/enums"
+import { Types } from "mongoose";
+import { generalValidationFields } from "../../common/validation";
+import { fileFieldValidation } from "../../common/utils/multer";
+
+export const createPost ={
+    body:z.object({
+        content : z.string().optional(),
+        attachments : z.array(z.any()).optional(),
+        tags : z.array(z.string()).optional(),
+        avalibility : z.coerce.number().default(AvailabilityEnum.PUBLIC),
+        files:z.array(generalValidationFields.file(fileFieldValidation.image)).optional()
+    }).superRefine((args,ctx)=>{
+        if (!args.attachments?.length && !args.content) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["content"],
+                message: "content is required if attachments are not provided",
+            });
+        }
+        if (args.tags?.length ) {
+            const uniqueTags = [...new Set(args.tags)];
+            if (uniqueTags.length !== args.tags.length) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["tags"],
+                    message: "Dublicate tags are not allowed",
+                })
+            }
+            for(const tag of args.tags){
+                if(!Types.ObjectId.isValid(tag)){
+                    ctx.addIssue({
+                        code: "custom",
+                        path: ["tags"],
+                        message: `Invalid tag id: ${tag}`,
+                    })
+                }
+            }
+        }
+    })
+}

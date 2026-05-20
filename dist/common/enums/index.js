@@ -18,3 +18,4 @@ __exportStar(require("./user.enum"), exports);
 __exportStar(require("./email.enum"), exports);
 __exportStar(require("./token.enum"), exports);
 __exportStar(require("./multer.enum"), exports);
+__exportStar(require("./post.enum"), exports);

@@ -9,5 +9,25 @@ export const generalValidationFields = {
   .regex(/^\d{6}$/),
     password: z.string().regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*\W).{8,16}$/,{error:"Weak password"}),
     username: z.string({error: "Username is mandatory"}).min(2,{error:"min is 2 char"}).max(25,{error:"max is 25 char"}),
-    confirmPassword: z.string({error: "Confirm password is mandatory"})
+    confirmPassword: z.string({error: "Confirm password is mandatory"}),
+    file:function(mimetype:string[]){
+return z.strictObject({
+    fieldname: z.string(),
+    originalname: z.string(),
+    encoding: z.string(),
+    mimetype: z.enum(mimetype),
+    size: z.number().max(5 * 1024 * 1024, { message: "File size should not exceed 5MB" }),
+    buffer: z.any().optional(), // we make it optional because in some cases we may not need to validate the file buffer and we just want to validate the file metadata like mimetype and size
+    path: z.string().optional() // we make it optional because in some cases we may not have the file path in the request and we just want to validate the file metadata like mimetype and size
+}).superRefine((args, ctx) => {
+    if(!args.path && !args.buffer){
+        ctx.addIssue({
+            code: "custom",
+            path:['buffer'],
+            message: "buffer is required ",
+        })
+      }  
+    })
+    }
+   
 }

@@ -29,19 +29,15 @@ class NotificationService {
                 credential: firebase_admin_1.default.credential.cert(serviceAccount),
             });
     }
-    async sendNotification({ token, data }) {
+    async sendNotification({ token, data, }) {
         const message = {
             token,
             data,
         };
         return await this.client.messaging().send(message);
     }
-    async sendNotifications({ tokens, data }) {
-        const message = {
-            tokens,
-            data,
-        };
-        await Promise.allSettled(tokens.map(token => this.sendNotification({ token, data })));
+    async sendNotifications({ tokens, data, }) {
+        await Promise.allSettled(tokens.map((token) => this.sendNotification({ token, data })));
     }
 }
 exports.NotificationService = NotificationService;
