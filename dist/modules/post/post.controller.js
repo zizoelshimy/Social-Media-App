@@ -50,4 +50,8 @@ router.get("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), 
     const data = await post_service_1.postService.postList(req.query, req.user);
     return (0, response_1.successResponse)({ res, message: "Posts retrieved successfully", data });
 });
+router.patch("/:postId/react", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, middleware_1.validation)(validators.reactPost), async (req, res, next) => {
+    const data = await post_service_1.postService.reactPost(req.params, req.query, req.user);
+    return (0, response_1.successResponse)({ res, message: "Post reacted successfully", data });
+});
 exports.default = router;

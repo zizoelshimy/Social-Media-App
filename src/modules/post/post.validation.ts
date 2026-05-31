@@ -40,3 +40,12 @@ export const createPost ={
         }
     })
 }
+
+export const reactPost ={
+    params:z.strictObject({
+        postId:generalValidationFields.id
+    }),
+    query:z.object({
+      react:z.coerce.number()
+    })
+}

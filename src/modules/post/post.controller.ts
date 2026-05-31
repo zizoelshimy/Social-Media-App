@@ -7,6 +7,7 @@ import type{ Request, Response,NextFunction } from "express";
 import * as validators from "./post.validation"
 import { postService } from "./post.service";
 import { PaginateDto, paginationValidationSchema } from "../../common/validation";
+import { ReactPostParamsDto, ReactPostQueryDto } from "./post.dto";
 const router =Router()
 
 router.post("/",
@@ -25,6 +26,15 @@ router.get("/",
    async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
     const data=await postService.postList(req.query as PaginateDto,req.user)
 return successResponse({res,message:"Posts retrieved successfully",data})
+}
+)
+
+router.patch("/:postId/react",
+    authentication(TokenTypeEnum.ACCESS),
+   validation(validators.reactPost),
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const data=await postService.reactPost(req.params as ReactPostParamsDto,req.query as unknown as ReactPostQueryDto,req.user)
+return successResponse({res,message:"Post reacted successfully",data})
 }
 )
 

@@ -1,7 +1,9 @@
+import { Types } from "mongoose";
 import { z } from "zod";
 
 //we make it as we will use them more than one time to make our wokr easier and to avoid code duplication 
 export const generalValidationFields = {
+    id:z.string().refine(value=>{return Types.ObjectId.isValid(value)},{error:"Invalid id"}),
     email: z.email(),
     phone: z.string({ error: "Phone is required" })
   .regex(/^(00201|\+201|01)(0|1|2|5)\d{8}$/),

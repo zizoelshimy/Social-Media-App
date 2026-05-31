@@ -202,13 +202,17 @@ export abstract class DataBaseRepository<TRawDoc> {
   }: {
     filter: QueryFilter<TRawDoc>;
     update: UpdateQuery<TRawDoc>;
-    options: QueryOptions<TRawDoc> & ReturnsNewDoc;
+    options?: QueryOptions<TRawDoc> & ReturnsNewDoc;
   }): Promise<HydratedDocument<TRawDoc> | null> {
-    return await this.model.findByIdAndUpdate(
-      filter,
-      { ...update, $inc: { __v: 1 } },
-      options,
-    ); //to increment the version key by 1 every time we update the document to prevent concurrent updates and to know how many times the document has been updated
+    const updateWithVersion: UpdateQuery<TRawDoc> = {
+      ...update,
+      $inc: {
+        ...(update as UpdateQuery<TRawDoc>).$inc,
+        __v: 1,
+      },
+    };
+
+    return await this.model.findOneAndUpdate(filter, updateWithVersion, options); // to increment the version key by 1 every time we update the document
   }
 
   async findByIdAndUpdate({

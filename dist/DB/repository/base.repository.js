@@ -63,7 +63,14 @@ class DataBaseRepository {
         return await this.model.updateOne(filter, update, options);
     }
     async findOneAndUpdate({ filter, update, options = { new: true }, }) {
-        return await this.model.findByIdAndUpdate(filter, { ...update, $inc: { __v: 1 } }, options); //to increment the version key by 1 every time we update the document to prevent concurrent updates and to know how many times the document has been updated
+        const updateWithVersion = {
+            ...update,
+            $inc: {
+                ...update.$inc,
+                __v: 1,
+            },
+        };
+        return await this.model.findOneAndUpdate(filter, updateWithVersion, options); // to increment the version key by 1 every time we update the document
     }
     async findByIdAndUpdate({ _id, update, options = { new: true }, }) {
         return await this.model.findByIdAndUpdate(_id, update, options);

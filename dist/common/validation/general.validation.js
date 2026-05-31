@@ -1,9 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.paginationValidationSchema = exports.generalValidationFields = void 0;
+const mongoose_1 = require("mongoose");
 const zod_1 = require("zod");
 //we make it as we will use them more than one time to make our wokr easier and to avoid code duplication 
 exports.generalValidationFields = {
+    id: zod_1.z.string().refine(value => { return mongoose_1.Types.ObjectId.isValid(value); }, { error: "Invalid id" }),
     email: zod_1.z.email(),
     phone: zod_1.z.string({ error: "Phone is required" })
         .regex(/^(00201|\+201|01)(0|1|2|5)\d{8}$/),

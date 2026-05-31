@@ -1,5 +1,5 @@
 import { HydratedDocument, Types } from "mongoose";
-import { CreatePostBodyDto } from "./post.dto";
+import { CreatePostBodyDto, ReactPostParamsDto, ReactPostQueryDto } from "./post.dto";
 import { IPaginate, IPost, IUser } from "../../common/interfaces";
 import { PostRepository, UserRepository } from "../../DB/repository";
 import {
@@ -88,6 +88,25 @@ export class PostService {
           }),
         },
       });
+    }
+    return post.toJSON();
+  }
+
+  async reactPost(
+    {postId}:ReactPostParamsDto,{react}:ReactPostQueryDto,
+    user: HydratedDocument<IUser>): Promise<IPost> {
+    const post = await this.postRepository.findOneAndUpdate({
+      filter:{
+        _id:postId,
+        $or:getAvailability(user),
+      },
+      update:{
+        ...(Number(react) >0?{$addToSet:{likes:user._id}}:{$pull:{likes:user._id}}), // this is for like or dislike
+        //here 0 for dislike and 1 for like 2 for love and so on you can add more reactions by increasing the number and adding a new field in the post model for each reaction and then updating that field here in the same way as likes
+      }
+    })
+    if(!post){
+        throw new NotFoundException("Post not found or you don't have access to it")
     }
     return post.toJSON();
   }
