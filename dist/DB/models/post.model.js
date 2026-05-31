@@ -33,7 +33,7 @@ const postSchema = new mongoose_1.Schema({
     strictQuery: true,
     collection: "SOCIAL_MEDIA_APP_POSTS"
 });
-postSchema.pre(["findOne", "find"], async function () {
+postSchema.pre(["findOne", "find", "countDocuments"], async function () {
     console.log(this);
     const query = this.getQuery();
     if (query.paranoid === false) {

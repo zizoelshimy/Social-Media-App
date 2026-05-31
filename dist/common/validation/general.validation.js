@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generalValidationFields = void 0;
+exports.paginationValidationSchema = exports.generalValidationFields = void 0;
 const zod_1 = require("zod");
 //we make it as we will use them more than one time to make our wokr easier and to avoid code duplication 
 exports.generalValidationFields = {
@@ -31,4 +31,11 @@ exports.generalValidationFields = {
             }
         });
     }
+};
+exports.paginationValidationSchema = {
+    query: zod_1.z.strictObject({
+        page: zod_1.z.coerce.number().optional(),
+        size: zod_1.z.coerce.number().optional(),
+        search: zod_1.z.string().optional()
+    })
 };

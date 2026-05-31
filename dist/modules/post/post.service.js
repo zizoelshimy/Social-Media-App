@@ -82,11 +82,13 @@ class PostService {
         }
         return post.toJSON();
     }
-    async postList(user) {
-        const posts = await this.postRepository.find({
+    async postList({ page, size, search }, user) {
+        const posts = await this.postRepository.paginate({
             filter: {
-                $or: (0, post_1.getAvailability)(user)
-            }
+                $or: (0, post_1.getAvailability)(user),
+                ...(search?.length ? { content: { $regex: search, $options: "i" } } : {})
+            },
+            page, size,
         });
         return posts;
     }

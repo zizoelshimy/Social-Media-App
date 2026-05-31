@@ -27,7 +27,29 @@ class DataBaseRepository {
         const doc = this.model.find(filter, projection);
         if (options?.lean)
             doc.lean(options.lean);
+        if (options?.skip)
+            doc.skip(options.skip);
+        if (options?.limit)
+            doc.limit(options.limit);
         return await doc.exec();
+    }
+    async paginate({ filter, projection, options = {}, page = 0, size = 5 }) {
+        let count = -1;
+        if (Number(page) > 0) {
+            page = parseInt(page);
+            size = parseInt(size);
+            options.skip = (page - 1) * size;
+            options.limit = size;
+            count = await this.model.countDocuments({ filter });
+        }
+        const docs = await this.find({ filter: filter || {}, projection, options });
+        return {
+            docs,
+            ...(Number(page) > 0 ? { currentPage: page,
+                size,
+                pages: count / parseInt(size)
+            } : {}),
+        };
     }
     //implementation of findById
     async findById({ _id, projection, options, }) {

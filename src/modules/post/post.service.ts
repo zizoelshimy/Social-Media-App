@@ -1,6 +1,6 @@
 import { HydratedDocument, Types } from "mongoose";
 import { CreatePostBodyDto } from "./post.dto";
-import { IPost, IUser } from "../../common/interfaces";
+import { IPaginate, IPost, IUser } from "../../common/interfaces";
 import { PostRepository, UserRepository } from "../../DB/repository";
 import {
   NotificationService,
@@ -15,6 +15,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { AvailabilityEnum } from "../../common/enums";
 import { getAvailability } from "../../common/utils/post";
+import { PaginateDto } from "../../common/validation";
 export class PostService {
   private userRepository: UserRepository;
   private readonly redis: RedisService;
@@ -92,12 +93,14 @@ export class PostService {
   }
 
 
-  async postList(
-    user: HydratedDocument<IUser>): Promise<IPost[]> {
-    const posts = await this.postRepository.find({
+  async postList({page,size,search}:PaginateDto,
+    user: HydratedDocument<IUser>): Promise<IPaginate<IPost>> {
+    const posts = await this.postRepository.paginate({
         filter: {
-            $or:getAvailability(user)
-        }
+            $or:getAvailability(user),
+            ...(search?.length?{content:{$regex:search,$options:"i"}}:{})
+        },
+        page,size,
     })
     return posts
   }
