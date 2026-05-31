@@ -11,6 +11,7 @@ const redis_service_1 = __importDefault(require("../../common/services/redis.ser
 const exceptions_1 = require("../../common/exceptions");
 const node_crypto_1 = require("node:crypto");
 const post_1 = require("../../common/utils/post");
+const objectid_1 = require("../../common/utils/objectid");
 class PostService {
     userRepository;
     redis;
@@ -107,6 +108,111 @@ class PostService {
             page, size,
         });
         return posts;
+    }
+    async updatePost({ postId }, { avalibility, content, files, tags = [], removeFiles = [], removeTags = [] }, user) {
+        const post = await this.postRepository.findOne({
+            filter: {
+                _id: postId,
+                createdBy: user._id
+            }
+        });
+        if (!post) {
+            throw new exceptions_1.NotFoundException("Post not found or you don't have permission to update it");
+        }
+        //this for check that the post is not empty after update because we have a condition in the post model that the post must have content or attachments and if we remove all attachments and not add new content or attachments it will be an invalid post
+        if (!post.content && !files?.length && post.attachments?.length == removeFiles?.length) {
+            throw new exceptions_1.BadRequestException("we can't update post to have no content and no attachments");
+        }
+        const mentions = [];
+        const FCM_Tokens = [];
+        if (tags?.length) {
+            const mentionedAccounts = await this.userRepository.find({
+                filter: {
+                    _id: { $in: tags },
+                },
+            });
+            if (mentionedAccounts.length != tags.length) {
+                throw new exceptions_1.NotFoundException("One or more mentioned accounts not found");
+            }
+            for (const tag of tags) {
+                mentions.push(mongoose_1.Types.ObjectId.createFromHexString(tag));
+                ((await this.redis.getFCMs(tag)) || []).map((token) => FCM_Tokens.push(token));
+            }
+        }
+        const folderId = post.folderId;
+        let attachments = [];
+        if (files?.length) {
+            attachments = await this.s3Service.uploadAssets({
+                files: files,
+                path: `Posts/${folderId}`,
+                Bucket: process.env.AWS_BUCKET_NAME,
+            });
+        }
+        const updatePost = await this.postRepository.findOneAndUpdate({
+            filter: {
+                _id: postId,
+                createdBy: user._id
+            },
+            update: [
+                {
+                    $set: {
+                        content: content || post.content,
+                        availability: Number(avalibility || post.availability),
+                        updatedBy: user._id,
+                        attachments: {
+                            //this for add new attachments and remove the removed attachments from the post
+                            $setUnion: [
+                                {
+                                    $setDifference: [
+                                        "$attachments",
+                                        removeFiles
+                                    ]
+                                },
+                                attachments
+                            ]
+                        },
+                        tags: {
+                            //this for add new tags and remove the removed tags from the post
+                            $setUnion: [
+                                {
+                                    $setDifference: [
+                                        "$tags",
+                                        removeTags.map((ele) => { return (0, objectid_1.toObjectId)(ele); })
+                                    ]
+                                },
+                                mentions
+                            ]
+                        }
+                    }
+                }
+            ],
+        });
+        if (!updatePost) {
+            if (attachments.length) {
+                await this.s3Service.deleteAssets({
+                    Keys: attachments.map((ele) => ({ Key: ele })),
+                });
+            }
+            throw new exceptions_1.BadRequestException("Failed to update post");
+        }
+        if (removeFiles?.length) {
+            await this.s3Service.deleteAssets({
+                Keys: removeFiles.map((ele) => ({ Key: ele })),
+            });
+        }
+        if (FCM_Tokens.length) {
+            await this.notificationService.sendNotifications({
+                tokens: FCM_Tokens,
+                data: {
+                    title: "New Post Created",
+                    body: JSON.stringify({
+                        message: `${user.firstName} ${user.lastName} mentioned you in a post`,
+                        postId: updatePost._id.toString(),
+                    }),
+                },
+            });
+        }
+        return updatePost.toJSON();
     }
 }
 exports.PostService = PostService;

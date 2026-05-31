@@ -54,4 +54,9 @@ router.patch("/:postId/react", (0, middleware_1.authentication)(enums_1.TokenTyp
     const data = await post_service_1.postService.reactPost(req.params, req.query, req.user);
     return (0, response_1.successResponse)({ res, message: "Post reacted successfully", data });
 });
+//update posts 
+router.patch("/:postId", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, multer_1.cloudFileUpload)({ validation: multer_1.fileFieldValidation.image }).array("attachments", 2), (0, middleware_1.validation)(validators.updatePost), async (req, res, next) => {
+    const data = await post_service_1.postService.updatePost(req.params, req.body, req.user);
+    return (0, response_1.successResponse)({ res, message: "Post updated successfully", data });
+});
 exports.default = router;

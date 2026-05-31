@@ -62,6 +62,10 @@ class DataBaseRepository {
         return await this.model.updateOne(filter, update, options);
     }
     async findOneAndUpdate({ filter, update, options = { new: true }, }) {
+        if (Array.isArray(update)) {
+            update.push({ $set: { __v: { $add: ["__v", 1] } } });
+            return await this.model.findOneAndUpdate(filter, update, { ...options, updatePipeline: true });
+        }
         const updateWithVersion = {
             ...update,
             $inc: {
@@ -69,7 +73,7 @@ class DataBaseRepository {
                 __v: 1,
             },
         };
-        return await this.model.findOneAndUpdate(filter, updateWithVersion, options); // to increment the version key by 1 every time we update the document
+        return await this.model.findOneAndUpdate(filter, updateWithVersion, { ...options, $incr: { __v: 1 } }); // to increment the version key by 1 every time we update the document
     }
     async findByIdAndUpdate({ _id, update, options = { new: true }, }) {
         return await this.model.findByIdAndUpdate(_id, update, options);

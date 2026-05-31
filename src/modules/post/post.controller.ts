@@ -7,7 +7,7 @@ import type{ Request, Response,NextFunction } from "express";
 import * as validators from "./post.validation"
 import { postService } from "./post.service";
 import { PaginateDto, paginationValidationSchema } from "../../common/validation";
-import { ReactPostParamsDto, ReactPostQueryDto } from "./post.dto";
+import { ReactPostParamsDto, ReactPostQueryDto, UpdatePostBodyDto, UpdatePostParamsDto } from "./post.dto";
 const router =Router()
 
 router.post("/",
@@ -35,6 +35,16 @@ router.patch("/:postId/react",
    async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
     const data=await postService.reactPost(req.params as ReactPostParamsDto,req.query as unknown as ReactPostQueryDto,req.user)
 return successResponse({res,message:"Post reacted successfully",data})
+}
+)
+//update posts 
+router.patch("/:postId",
+    authentication(TokenTypeEnum.ACCESS),
+    cloudFileUpload({validation:fileFieldValidation.image}).array("attachments",2),
+   validation(validators.updatePost),
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const data=await postService.updatePost(req.params as UpdatePostParamsDto,req.body as UpdatePostBodyDto,req.user)
+return successResponse({res,message:"Post updated successfully",data})
 }
 )
 

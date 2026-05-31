@@ -203,6 +203,10 @@ export abstract class DataBaseRepository<TRawDoc> {
     update: UpdateQuery<TRawDoc>;
     options?: QueryOptions<TRawDoc> & ReturnsNewDoc;
   }): Promise<HydratedDocument<TRawDoc> | null> {
+    if(Array.isArray(update)){
+       update.push({$set:{__v:{$add:["__v",1]}}})
+      return await this.model.findOneAndUpdate(filter, update, {...options,updatePipeline:true});
+    }
     const updateWithVersion: UpdateQuery<TRawDoc> = {
       ...update,
       $inc: {
@@ -214,7 +218,7 @@ export abstract class DataBaseRepository<TRawDoc> {
     return await this.model.findOneAndUpdate(
       filter,
       updateWithVersion,
-      options,
+      {...options,$incr:{__v:1}},
     ); // to increment the version key by 1 every time we update the document
   }
 
