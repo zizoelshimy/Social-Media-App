@@ -110,40 +110,39 @@ export abstract class DataBaseRepository<TRawDoc> {
   }): Promise<HydratedDocument<TRawDoc>[]> {
     const doc = this.model.find(filter, projection);
     if (options?.lean) doc.lean(options.lean);
-    if(options?.skip) doc.skip(options.skip)
-    if(options?.limit) doc.limit(options.limit)
+    if (options?.skip) doc.skip(options.skip);
+    if (options?.limit) doc.limit(options.limit);
     return await doc.exec();
   }
 
-    async paginate({
+  async paginate({
     filter,
     projection,
-    options={},
-    page=0,
-    size=5
+    options = {},
+    page = 0,
+    size = 5,
   }: {
     filter?: QueryFilter<TRawDoc>;
     projection?: ProjectionType<TRawDoc> | null | undefined;
-    options?: QueryOptions<TRawDoc>  | undefined;
-    page?:number|string|undefined;
-    size?:number|string|undefined;
+    options?: QueryOptions<TRawDoc> | undefined;
+    page?: number | string | undefined;
+    size?: number | string | undefined;
   }): Promise<IPaginate<TRawDoc>> {
-    let count:number=-1
-    if(Number(page)>0){
-      page=parseInt(page as string)
-      size=parseInt(size as string)
-      options.skip= (page-1)*size
-      options.limit=size
-      count=await this.model.countDocuments({filter})
+    let count: number = -1;
+    if (Number(page) > 0) {
+      page = parseInt(page as string);
+      size = parseInt(size as string);
+      options.skip = (page - 1) * size;
+      options.limit = size;
+      count = await this.model.countDocuments({ filter });
     }
-    const docs = await this.find({ filter:filter||{}, projection, options });
+    const docs = await this.find({ filter: filter || {}, projection, options });
     return {
       docs,
-      ...(Number(page)>0?{currentPage:page,
-        size,
-        pages:count/parseInt(size as string)
-      }:{} ),
-    }
+      ...(Number(page) > 0
+        ? { currentPage: page, size, pages: count / parseInt(size as string) }
+        : {}),
+    };
   }
 
   //find by ID
@@ -212,7 +211,11 @@ export abstract class DataBaseRepository<TRawDoc> {
       },
     };
 
-    return await this.model.findOneAndUpdate(filter, updateWithVersion, options); // to increment the version key by 1 every time we update the document
+    return await this.model.findOneAndUpdate(
+      filter,
+      updateWithVersion,
+      options,
+    ); // to increment the version key by 1 every time we update the document
   }
 
   async findByIdAndUpdate({

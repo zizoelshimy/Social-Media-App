@@ -33,7 +33,7 @@ class DataBaseRepository {
             doc.limit(options.limit);
         return await doc.exec();
     }
-    async paginate({ filter, projection, options = {}, page = 0, size = 5 }) {
+    async paginate({ filter, projection, options = {}, page = 0, size = 5, }) {
         let count = -1;
         if (Number(page) > 0) {
             page = parseInt(page);
@@ -45,10 +45,9 @@ class DataBaseRepository {
         const docs = await this.find({ filter: filter || {}, projection, options });
         return {
             docs,
-            ...(Number(page) > 0 ? { currentPage: page,
-                size,
-                pages: count / parseInt(size)
-            } : {}),
+            ...(Number(page) > 0
+                ? { currentPage: page, size, pages: count / parseInt(size) }
+                : {}),
         };
     }
     //implementation of findById
