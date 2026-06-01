@@ -1,10 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PostModel = void 0;
+exports.CommentModel = void 0;
 const mongoose_1 = require("mongoose");
-const enums_1 = require("../../common/enums");
-const postSchema = new mongoose_1.Schema({
-    folderId: { type: String, required: true },
+const commentSchema = new mongoose_1.Schema({
     content: {
         type: String,
         required: function () {
@@ -14,7 +12,8 @@ const postSchema = new mongoose_1.Schema({
     attachments: { type: [String] },
     likes: [{ type: mongoose_1.Types.ObjectId, ref: "User" }],
     tags: [{ type: mongoose_1.Types.ObjectId, ref: "User" }],
-    availability: { type: Number, enum: enums_1.AvailabilityEnum, default: enums_1.AvailabilityEnum.PUBLIC },
+    postId: { type: mongoose_1.Types.ObjectId, ref: "Post", required: true },
+    commentId: { type: mongoose_1.Types.ObjectId, ref: "Comment" },
     createdBy: { type: mongoose_1.Types.ObjectId, ref: "User", required: true },
     updatedBy: { type: mongoose_1.Types.ObjectId, ref: "User" },
     createdAt: { type: Date, default: Date.now },
@@ -33,14 +32,7 @@ const postSchema = new mongoose_1.Schema({
     strictQuery: true,
     collection: "SOCIAL_MEDIA_APP_POSTS"
 });
-//post._id=comment.postId
-postSchema.virtual("comments", {
-    localField: "_id",
-    foreignField: "postId",
-    ref: "Comment",
-    justOne: true
-});
-postSchema.pre(["findOne", "find", "countDocuments"], async function () {
+commentSchema.pre(["findOne", "find", "countDocuments"], async function () {
     console.log(this);
     const query = this.getQuery();
     if (query.paranoid === false) {
@@ -53,7 +45,7 @@ postSchema.pre(["findOne", "find", "countDocuments"], async function () {
         });
     }
 });
-postSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
+commentSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
     const update = this.getUpdate();
     if (update.deletedAt) {
         this.setUpdate({ ...update, $unset: { restoredAt: 1 } });
@@ -71,7 +63,7 @@ postSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
         });
     }
 });
-postSchema.pre(["deleteOne", "findOneAndDelete"], async function () {
+commentSchema.pre(["deleteOne", "findOneAndDelete"], async function () {
     const query = this.getQuery();
     if (query.force === true) {
         this.setQuery({ ...query });
@@ -82,5 +74,5 @@ postSchema.pre(["deleteOne", "findOneAndDelete"], async function () {
         });
     }
 });
-exports.PostModel = mongoose_1.models.Post || (0, mongoose_1.model)("Post", postSchema);
-exports.PostModel.syncIndexes();
+exports.CommentModel = mongoose_1.models.Comment || (0, mongoose_1.model)("Comment", commentSchema);
+exports.CommentModel.syncIndexes();

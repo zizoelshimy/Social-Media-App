@@ -1,9 +1,8 @@
 import { HydratedDocument, model, models, Schema, Types } from "mongoose";
 import { AvailabilityEnum } from "../../common/enums";
-import { IPost } from "../../common/interfaces";
+import { IComment, IPost } from "../../common/interfaces";
 
-const postSchema = new Schema<IPost>({
-    folderId: { type: String, required: true },
+const commentSchema = new Schema<IComment>({
     content: { 
         type: String,
         required: function (this) {
@@ -13,7 +12,10 @@ const postSchema = new Schema<IPost>({
     attachments: { type: [String] },
     likes: [{ type: Types.ObjectId, ref: "User" }],
     tags: [{ type: Types.ObjectId, ref: "User" }],
-    availability: { type: Number, enum: AvailabilityEnum, default: AvailabilityEnum.PUBLIC },
+
+    postId:{type:Types.ObjectId,ref:"Post",required:true},
+    commentId:{type:Types.ObjectId,ref:"Comment"},
+
     createdBy: { type: Types.ObjectId, ref: "User", required: true },
     updatedBy: { type: Types.ObjectId, ref: "User" },
     createdAt: { type: Date, default: Date.now },
@@ -33,15 +35,7 @@ const postSchema = new Schema<IPost>({
     collection:"SOCIAL_MEDIA_APP_POSTS"
 })
 
-//post._id=comment.postId
-postSchema.virtual("comments",{
-    localField:"_id",
-    foreignField:"postId",
-    ref:"Comment",
-    justOne:true
-})
-
-postSchema.pre(["findOne", "find","countDocuments"], async function () {
+commentSchema.pre(["findOne", "find","countDocuments"], async function () {
 console.log(this)
 const query=this.getQuery()
 if(query.paranoid === false){
@@ -56,8 +50,8 @@ deletedAt:{$exists:false}
 
 } )
  
-postSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
-    const update=this.getUpdate() as HydratedDocument<IPost>
+commentSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
+    const update=this.getUpdate() as HydratedDocument<IComment>
     if(update.deletedAt){
         this.setUpdate({...update,$unset:{restoredAt:1}}) 
     }
@@ -76,7 +70,7 @@ this.setQuery({deletedAt:{$exists:false},...query,
 }
 
 } )
-postSchema.pre(["deleteOne", "findOneAndDelete"], async function () {
+commentSchema.pre(["deleteOne", "findOneAndDelete"], async function () {
  
   
 const query=this.getQuery()
@@ -93,5 +87,5 @@ this.setQuery({deletedAt:{$exists:true},...query,
 } )
 
 
-export const PostModel =models.Post || model <IPost>("Post", postSchema)
-PostModel.syncIndexes()
+export const CommentModel = models.Comment || model<IComment>("Comment", commentSchema)
+CommentModel.syncIndexes()

@@ -96,6 +96,7 @@ export abstract class DataBaseRepository<TRawDoc> {
   }): Promise<any> {
     const doc = this.model.findOne(filter, projection);
     if (options?.lean) doc.lean(options.lean);
+    if (options?.populate) doc.populate(options.populate as any);
     return await doc.exec();
   }
 
@@ -112,6 +113,7 @@ export abstract class DataBaseRepository<TRawDoc> {
     if (options?.lean) doc.lean(options.lean);
     if (options?.skip) doc.skip(options.skip);
     if (options?.limit) doc.limit(options.limit);
+    if (options?.populate) doc.populate(options.populate as any);
     return await doc.exec();
   }
 
@@ -178,6 +180,7 @@ export abstract class DataBaseRepository<TRawDoc> {
   }): Promise<any> {
     const doc = this.model.findById(_id, projection);
     if (options?.lean) doc.lean(options.lean);
+    if (options?.populate) doc.populate(options.populate as any);
     return await doc.exec();
   }
 
@@ -203,9 +206,12 @@ export abstract class DataBaseRepository<TRawDoc> {
     update: UpdateQuery<TRawDoc>;
     options?: QueryOptions<TRawDoc> & ReturnsNewDoc;
   }): Promise<HydratedDocument<TRawDoc> | null> {
-    if(Array.isArray(update)){
-       update.push({$set:{__v:{$add:["__v",1]}}})
-      return await this.model.findOneAndUpdate(filter, update, {...options,updatePipeline:true});
+    if (Array.isArray(update)) {
+      update.push({ $set: { __v: { $add: ["__v", 1] } } });
+      return await this.model.findOneAndUpdate(filter, update, {
+        ...options,
+        updatePipeline: true,
+      });
     }
     const updateWithVersion: UpdateQuery<TRawDoc> = {
       ...update,
@@ -215,11 +221,10 @@ export abstract class DataBaseRepository<TRawDoc> {
       },
     };
 
-    return await this.model.findOneAndUpdate(
-      filter,
-      updateWithVersion,
-      {...options,$incr:{__v:1}},
-    ); // to increment the version key by 1 every time we update the document
+    return await this.model.findOneAndUpdate(filter, updateWithVersion, {
+      ...options,
+      $incr: { __v: 1 },
+    }); // to increment the version key by 1 every time we update the document
   }
 
   async findByIdAndUpdate({

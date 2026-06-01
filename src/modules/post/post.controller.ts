@@ -8,7 +8,9 @@ import * as validators from "./post.validation"
 import { postService } from "./post.service";
 import { PaginateDto, paginationValidationSchema } from "../../common/validation";
 import { ReactPostParamsDto, ReactPostQueryDto, UpdatePostBodyDto, UpdatePostParamsDto } from "./post.dto";
+import { commentRouter } from "../comment";
 const router =Router()
+router.use('/:postId/comments', commentRouter )
 
 router.post("/",
     authentication(TokenTypeEnum.ACCESS),

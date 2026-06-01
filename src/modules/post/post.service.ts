@@ -121,6 +121,9 @@ export class PostService {
             ...(search?.length?{content:{$regex:search,$options:"i"}}:{})
         },
         page,size,
+        options:{
+          populate:[{path:"comments"}]
+        }
     })
     return posts
   }

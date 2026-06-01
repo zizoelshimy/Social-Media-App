@@ -41,7 +41,9 @@ const response_1 = require("../../common/response");
 const validators = __importStar(require("./post.validation"));
 const post_service_1 = require("./post.service");
 const validation_1 = require("../../common/validation");
+const comment_1 = require("../comment");
 const router = (0, express_1.Router)();
+router.use('/:postId/comments', comment_1.commentRouter);
 router.post("/", (0, middleware_1.authentication)(enums_1.TokenTypeEnum.ACCESS), (0, multer_1.cloudFileUpload)({ validation: multer_1.fileFieldValidation.image }).array("attachments", 2), (0, middleware_1.validation)(validators.createPost), async (req, res, next) => {
     const data = await post_service_1.postService.createPost({ ...req.body, files: req.files }, req.user);
     return (0, response_1.successResponse)({ res, message: "Post created successfully", data });
