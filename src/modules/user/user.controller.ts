@@ -2,13 +2,14 @@ import { type NextFunction, Router } from "express";
 import type { Request, Response } from "express";
 import { successResponse } from "../../common/response";
 import UserService from "./user.service";
-import { authentication, authorization } from "../../middleware";
+import { authentication, authorization, validation } from "../../middleware";
 import { StorageApproachEnum, TokenTypeEnum } from "../../common/enums";
 import { endpoint } from "./user.authorization";
 import {
   cloudFileUpload,
   fileFieldValidation,
 } from "../../common/utils/multer";
+import * as validators from "./user.validation";
 const router = Router();
 const userService = new UserService();
 
@@ -22,6 +23,26 @@ router.get(
       res,
       data,
     });
+  },
+);
+
+router.patch(
+  "/profile",
+  authentication(TokenTypeEnum.ACCESS),
+  validation(validators.updateProfile),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const data = await userService.updateProfile(req.body, req.user);
+    return successResponse({ res, data });
+  },
+);
+
+router.get(
+  "/:userId/posts",
+  authentication(TokenTypeEnum.ACCESS),
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { userId } = req.params as { userId: string };
+    const data = await userService.profilePosts(userId, req.user);
+    return successResponse({ res, data });
   },
 );
 

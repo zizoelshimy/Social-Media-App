@@ -31,12 +31,57 @@ return successResponse({res,message:"Posts retrieved successfully",data})
 }
 )
 
+router.get("/dashboard",
+    authentication(TokenTypeEnum.ACCESS),
+    validation(paginationValidationSchema),
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const data=await postService.dashboardFeed(req.query as PaginateDto,req.user)
+return successResponse({res,message:"Dashboard feed retrieved successfully",data})
+}
+)
+
+router.get("/:postId",
+    authentication(TokenTypeEnum.ACCESS),
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const { postId } = req.params as { postId: string };
+    const data=await postService.getPost(postId,req.user)
+return successResponse({res,message:"Post retrieved successfully",data})
+}
+)
+
 router.patch("/:postId/react",
     authentication(TokenTypeEnum.ACCESS),
    validation(validators.reactPost),
    async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
     const data=await postService.reactPost(req.params as ReactPostParamsDto,req.query as unknown as ReactPostQueryDto,req.user)
 return successResponse({res,message:"Post reacted successfully",data})
+}
+)
+
+router.delete("/:postId",
+    authentication(TokenTypeEnum.ACCESS),
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const { postId } = req.params as { postId: string };
+    const data=await postService.deletePost(postId,req.user,false)
+return successResponse({res,message:"Post deleted successfully",data})
+}
+)
+
+router.delete("/:postId/hard",
+    authentication(TokenTypeEnum.ACCESS),
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const { postId } = req.params as { postId: string };
+    const data=await postService.deletePost(postId,req.user,true)
+return successResponse({res,message:"Post hard deleted successfully",data})
+}
+)
+
+router.patch("/:postId/restore",
+    authentication(TokenTypeEnum.ACCESS),
+   async (req:Request,res:Response,next:NextFunction):Promise<Response>=>{
+    const { postId } = req.params as { postId: string };
+    const data=await postService.restorePost(postId,req.user)
+return successResponse({res,message:"Post restored successfully",data})
 }
 )
 //update posts 

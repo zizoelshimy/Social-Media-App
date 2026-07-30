@@ -13,10 +13,10 @@ import {
   NotFoundException,
 } from "../../common/exceptions";
 import { randomUUID } from "node:crypto";
-import { AvailabilityEnum } from "../../common/enums";
 import { getAvailability } from "../../common/utils/post";
 import { PaginateDto } from "../../common/validation";
 import { toObjectId } from "../../common/utils/objectid";
+import { realtimeService } from "../../common/services";
 export class PostService {
   private userRepository: UserRepository;
   private readonly redis: RedisService;
@@ -90,25 +90,34 @@ export class PostService {
         },
       });
     }
+    realtimeService.emit("post.created", post.toJSON());
     return post.toJSON();
   }
 
   async reactPost(
-    {postId}:ReactPostParamsDto,{react}:ReactPostQueryDto,
+    {postId}:ReactPostParamsDto,{react, emoji}:ReactPostQueryDto,
     user: HydratedDocument<IUser>): Promise<IPost> {
-    const post = await this.postRepository.findOneAndUpdate({
+    const post = await this.postRepository.findOne({
       filter:{
         _id:postId,
         $or:getAvailability(user),
       },
-      update:{
-        ...(Number(react) >0?{$addToSet:{likes:user._id}}:{$pull:{likes:user._id}}), // this is for like or dislike
-        //here 0 for dislike and 1 for like 2 for love and so on you can add more reactions by increasing the number and adding a new field in the post model for each reaction and then updating that field here in the same way as likes
-      }
     })
     if(!post){
         throw new NotFoundException("Post not found or you don't have access to it")
     }
+    const reactionEmoji = emoji || (Number(react) > 0 ? "like" : undefined);
+    post.reactions = ((post.reactions || []) as NonNullable<IPost["reactions"]>).filter((reaction) => reaction.user.toString() !== user._id.toString());
+    const likes = ((post.likes || []) as Types.ObjectId[]).filter((liker) => liker.toString() !== user._id.toString());
+    if (reactionEmoji) {
+      post.reactions.push({ user: user._id, emoji: reactionEmoji, createdAt: new Date(), updatedAt: new Date() } as never);
+      if (reactionEmoji === "like") {
+        likes.push(user._id);
+      }
+    }
+    post.likes = likes as never;
+    await post.save();
+    realtimeService.emitToPost(post._id.toString(), "post.reacted", post.toJSON());
     return post.toJSON();
   }
 
@@ -126,6 +135,64 @@ export class PostService {
         }
     })
     return posts
+  }
+
+  async getPost(postId: string, user: HydratedDocument<IUser>): Promise<IPost> {
+    const post = await this.postRepository.findOne({
+      filter: {
+        _id: postId,
+        $or: getAvailability(user),
+      },
+      options: { populate: [{ path: "comments" }, { path: "createdBy" }], lean: false } as any,
+    });
+    if (!post) {
+      throw new NotFoundException("Post not found");
+    }
+    return post.toJSON();
+  }
+
+  async deletePost(postId: string, user: HydratedDocument<IUser>, hard = false): Promise<boolean> {
+    const filter = hard
+      ? { _id: postId, createdBy: user._id, force: true }
+      : { _id: postId, createdBy: user._id };
+    const result = hard
+      ? await this.postRepository.deleteOne({ filter })
+      : await this.postRepository.findOneAndUpdate({
+          filter,
+          update: { deletedAt: new Date() },
+        });
+    if (!result) {
+      throw new NotFoundException("Post not found or you don't have permission to delete it");
+    }
+    return true;
+  }
+
+  async restorePost(postId: string, user: HydratedDocument<IUser>): Promise<boolean> {
+    const result = await this.postRepository.findOneAndUpdate({
+      filter: { _id: postId, createdBy: user._id },
+      update: { restoredAt: new Date() },
+    });
+    if (!result) {
+      throw new NotFoundException("Post not found or you don't have permission to restore it");
+    }
+    return true;
+  }
+
+  async dashboardFeed(query: PaginateDto, user: HydratedDocument<IUser>): Promise<IPaginate<IPost>> {
+    return await this.postList(query, user);
+  }
+
+  async profilePosts(profileUserId: string, query: PaginateDto, user: HydratedDocument<IUser>): Promise<IPaginate<IPost>> {
+    const posts = await this.postRepository.paginate({
+      filter: {
+        createdBy: profileUserId,
+        ...(profileUserId === user._id.toString() ? {} : { availability: { $in: [0, 1] } }),
+      },
+      page: query.page,
+      size: query.size,
+      options: { populate: [{ path: "comments" }] },
+    });
+    return posts;
   }
 
    async updatePost({postId}:UpdatePostParamsDto,
@@ -236,6 +303,7 @@ export class PostService {
         },
       });
     }
+    realtimeService.emitToPost(updatePost._id.toString(), "post.updated", updatePost.toJSON());
     return updatePost.toJSON();
   }
 

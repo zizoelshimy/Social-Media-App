@@ -17,6 +17,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from "../../common/exceptions";
+import { realtimeService } from "../../common/services";
 export class CommentService {
   private userRepository: UserRepository;
   private readonly redis: RedisService;
@@ -103,7 +104,79 @@ export class CommentService {
         },
       });
     }
+    realtimeService.emitToPost(post._id.toString(), "comment.created", comment.toJSON());
     return comment.toJSON();
+  }
+
+  async commentList(postId: string, user: HydratedDocument<IUser>): Promise<IComment[]> {
+    return await this.commentRepository.find({
+      filter: {
+        postId,
+        $or: getAvailability(user),
+      },
+      options: { populate: [{ path: "createdBy" }] },
+    });
+  }
+
+  async getComment(postId: string, commentId: string, user: HydratedDocument<IUser>): Promise<IComment> {
+    const comment = await this.commentRepository.findOne({
+      filter: {
+        _id: commentId,
+        postId,
+        $or: getAvailability(user),
+      },
+    });
+    if (!comment) {
+      throw new NotFoundException("Comment not found");
+    }
+    return comment.toJSON();
+  }
+
+  async updateComment(postId: string, commentId: string, body: { content?: string }, user: HydratedDocument<IUser>): Promise<IComment> {
+    const comment = await this.commentRepository.findOne({
+      filter: { _id: commentId, postId, createdBy: user._id },
+    });
+    if (!comment) {
+      throw new NotFoundException("Comment not found or you don't have permission to update it");
+    }
+    if (body.content) {
+      comment.content = body.content;
+    }
+    comment.updatedBy = user._id;
+    await comment.save();
+    realtimeService.emitToPost(postId, "comment.updated", comment.toJSON());
+    return comment.toJSON();
+  }
+
+  async deleteComment(postId: string, commentId: string, user: HydratedDocument<IUser>, hard = false): Promise<boolean> {
+    const comment = await this.commentRepository.findOne({
+      filter: { _id: commentId, postId, createdBy: user._id },
+    });
+    if (!comment) {
+      throw new NotFoundException("Comment not found or you don't have permission to delete it");
+    }
+    if (hard) {
+      await this.commentRepository.deleteOne({ filter: { _id: commentId, force: true } });
+    } else {
+      await this.commentRepository.findOneAndUpdate({
+        filter: { _id: commentId, postId, createdBy: user._id },
+        update: { deletedAt: new Date() },
+      });
+    }
+    realtimeService.emitToPost(postId, "comment.deleted", { commentId, hard });
+    return true;
+  }
+
+  async restoreComment(postId: string, commentId: string, user: HydratedDocument<IUser>): Promise<boolean> {
+    const result = await this.commentRepository.findOneAndUpdate({
+      filter: { _id: commentId, postId, createdBy: user._id },
+      update: { restoredAt: new Date() },
+    });
+    if (!result) {
+      throw new NotFoundException("Comment not found or you don't have permission to restore it");
+    }
+    realtimeService.emitToPost(postId, "comment.restored", { commentId });
+    return true;
   }
 }
 export const commentService = new CommentService();

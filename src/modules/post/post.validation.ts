@@ -46,7 +46,14 @@ export const reactPost ={
         postId:generalValidationFields.id
     }),
     query:z.object({
-      react:z.coerce.number()
+      react:z.coerce.number().optional(),
+      emoji:z.string().optional()
+    })
+}
+
+export const postParams = {
+    params:z.strictObject({
+        postId:generalValidationFields.id
     })
 }
 

@@ -8,7 +8,7 @@ import {
 } from "../../common/enums";
 import { RedisService, S3Service, TokenService } from "../../common/services";
 import { AWS_BUCKET_NAME, REFRESH_TOKEN_EXPIRES_IN } from "../../config/config";
-import { UserRepository } from "../../DB/repository";
+import { PostRepository, UserRepository } from "../../DB/repository";
 
 class UserService {
   private readonly redis: RedisService;
@@ -23,6 +23,38 @@ class UserService {
   }
   async profile(user: HydratedDocument<IUser>): Promise<any> {
     return user.toJSON();
+  }
+
+  async updateProfile(
+    payload: Partial<Pick<IUser, "firstName" | "lastName" | "phone" | "DOB" | "profilePicture" | "profileCoverPictures">>,
+    user: HydratedDocument<IUser>,
+  ): Promise<IUser> {
+    if (payload.firstName) user.firstName = payload.firstName;
+    if (payload.lastName) user.lastName = payload.lastName;
+    if (payload.phone) user.phone = payload.phone;
+    if (payload.DOB) user.DOB = payload.DOB;
+    if (payload.profilePicture) user.profilePicture = payload.profilePicture;
+    if (payload.profileCoverPictures) user.profileCoverPictures = payload.profileCoverPictures;
+    user.slug = `${user.firstName}-${user.lastName}`.toLowerCase();
+    await user.save();
+    return user.toJSON();
+  }
+
+  async profilePosts(userId: string, viewer: HydratedDocument<IUser>) {
+    const profileUser = await this.userRepository.findOne({
+      filter: { _id: userId },
+      options: { populate: [{ path: "friends" }], lean: false } as any,
+    });
+    if (!profileUser) {
+      throw new NotFoundException("Profile not found");
+    }
+    const postRepository = new PostRepository();
+    return await postRepository.paginate({
+      filter: {
+        createdBy: userId,
+        ...(viewer._id.toString() === userId ? {} : { availability: { $in: [0, 1] } }),
+      },
+    });
   }
 
   //log out

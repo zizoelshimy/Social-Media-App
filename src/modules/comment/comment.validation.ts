@@ -1,5 +1,4 @@
 import {z} from "zod"
-import { Types } from "mongoose";
 import { generalValidationFields} from "../../common/validation";
 import { fileFieldValidation } from "../../common/utils/multer";
 
@@ -30,6 +29,23 @@ export const createComment ={
                 })
             }
         }
+    })
+}
+
+export const commentParams = {
+    params:z.strictObject({
+        postId:generalValidationFields.id,
+        commentId:generalValidationFields.id,
+    })
+}
+
+export const updateComment = {
+    params: z.strictObject({
+        postId: generalValidationFields.id,
+        commentId: generalValidationFields.id,
+    }),
+    body: z.object({
+        content: z.string().optional(),
     })
 }
 

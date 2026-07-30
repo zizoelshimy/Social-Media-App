@@ -52,55 +52,53 @@ userSchema.virtual("username").set(function(value:string){
 })
 
 userSchema.pre(["findOne", "find"], async function () {
-console.log(this)
-const query=this.getQuery()
-if(query.paranoid === false){
-    this.setQuery({...query})
-    return
-}
-else{
-this.setQuery({...query,
-deletedAt:{$exists:false}
-})
-}
+    const query = this.getQuery() as Record<string, unknown>;
+    if (query.paranoid === false) {
+        this.setQuery({ ...query });
+        return;
+    }
+    this.setQuery({ ...query, deletedAt: { $exists: false } });
+});
 
-} )
- 
 userSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
-    const update=this.getUpdate() as HydratedDocument<IUser>
-    if(update.deletedAt){
-        this.setUpdate({...update,$unset:{restoredAt:1}}) 
+    const update = this.getUpdate() as HydratedDocument<IUser>;
+    const query = this.getQuery() as Record<string, unknown>;
+    const postModel = this.model.db.model("Post");
+    const commentModel = this.model.db.model("Comment");
+    const storyModel = this.model.db.model("Story");
+    const notificationModel = this.model.db.model("Notification");
+    if (update.deletedAt) {
+        this.setUpdate({ ...update, $unset: { restoredAt: 1 } });
+        await postModel.updateMany({ createdBy: query._id, deletedAt: { $exists: false } }, { deletedAt: new Date() });
+        await commentModel.updateMany({ createdBy: query._id, deletedAt: { $exists: false } }, { deletedAt: new Date() });
+        await storyModel.updateMany({ createdBy: query._id, deletedAt: { $exists: false } }, { deletedAt: new Date() });
+        await notificationModel.updateMany({ createdBy: query._id, deletedAt: { $exists: false } }, { deletedAt: new Date() });
     }
-    if(update.restoredAt){
-            this.setUpdate({...update,$unset:{deleteAt:1}}) 
+    if (update.restoredAt) {
+        this.setUpdate({ ...update, $unset: { deletedAt: 1 } });
+        await postModel.updateMany({ createdBy: query._id, deletedAt: { $exists: true } }, { restoredAt: new Date(), $unset: { deletedAt: 1 } });
+        await commentModel.updateMany({ createdBy: query._id, deletedAt: { $exists: true } }, { restoredAt: new Date(), $unset: { deletedAt: 1 } });
+        await storyModel.updateMany({ createdBy: query._id, deletedAt: { $exists: true } }, { restoredAt: new Date(), $unset: { deletedAt: 1 } });
+        await notificationModel.updateMany({ createdBy: query._id, deletedAt: { $exists: true } }, { restoredAt: new Date(), $unset: { deletedAt: 1 } });
     }
-const query=this.getQuery()
-if(query.paranoid === false){
-    this.setQuery({...query})
-    return
-}
-else{
-this.setQuery({deletedAt:{$exists:false},...query,
+    if (query.paranoid === false) {
+        this.setQuery({ ...query });
+        return;
+    }
+    this.setQuery({ deletedAt: { $exists: false }, ...query });
+});
 
-})
-}
-
-} )
 userSchema.pre(["deleteOne", "findOneAndDelete"], async function () {
- 
-  
-const query=this.getQuery()
-if(query.force === true){
-    this.setQuery({...query})
-    return
-}
-else{
-this.setQuery({deletedAt:{$exists:true},...query,
-
-})
-}
-
-} )
+    const query = this.getQuery() as Record<string, unknown>;
+    const { force, ...restQuery } = query;
+    this.setQuery(restQuery);
+    if (force === true) {
+        await this.model.db.model("Post").deleteMany({ createdBy: restQuery._id });
+        await this.model.db.model("Comment").deleteMany({ createdBy: restQuery._id });
+        await this.model.db.model("Story").deleteMany({ createdBy: restQuery._id });
+        await this.model.db.model("Notification").deleteMany({ createdBy: restQuery._id });
+    }
+});
 
 userSchema.pre("save", async function (this:HydratedDocument<IUser> &{wasNew:boolean}) {
 //this to not hash the password again if it is not modified

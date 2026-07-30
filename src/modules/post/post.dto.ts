@@ -6,3 +6,6 @@ export type ReactPostParamsDto = z.infer<typeof reactPost.params>
 
 export type UpdatePostBodyDto = z.infer<typeof updatePost.body>
 export type UpdatePostParamsDto = z.infer<typeof updatePost.params>
+
+export type DeletePostParamsDto = { postId: string };
+export type RestorePostParamsDto = { postId: string };
