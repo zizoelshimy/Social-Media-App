@@ -1,6 +1,12 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
-import { authRouter, notificationRouter, postRouter, storyRouter, userRouter } from "./modules";
+import {
+  authRouter,
+  notificationRouter,
+  postRouter,
+  storyRouter,
+  userRouter,
+} from "./modules";
 import { globalErrorHandler } from "./middleware";
 import { PORT } from "./config/config";
 import connectDB from "./DB/connection.db";
@@ -11,7 +17,17 @@ import("./DB/repository/base.repository.js");
 import { pipeline } from "node:stream";
 import { promisify } from "node:util";
 import { successResponse } from "./common/response";
-import { GraphQLBoolean, GraphQLFloat, GraphQLInputObjectType, GraphQLInt, GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLSchema, GraphQLString } from 'graphql'
+import {
+  GraphQLBoolean,
+  GraphQLFloat,
+  GraphQLInputObjectType,
+  GraphQLInt,
+  GraphQLList,
+  GraphQLNonNull,
+  GraphQLObjectType,
+  GraphQLSchema,
+  GraphQLString,
+} from "graphql";
 import { createHandler } from "graphql-http/lib/use/express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
@@ -28,7 +44,10 @@ const bootstrap = async (): Promise<void> => {
   const postType = new GraphQLObjectType({
     name: "Post",
     fields: {
-      id: { type: new GraphQLNonNull(GraphQLString), resolve: (value) => value._id?.toString?.() || value.id },
+      id: {
+        type: new GraphQLNonNull(GraphQLString),
+        resolve: (value) => value._id?.toString?.() || value.id,
+      },
       content: { type: GraphQLString },
       folderId: { type: GraphQLString },
       availability: { type: GraphQLInt },
@@ -39,7 +58,10 @@ const bootstrap = async (): Promise<void> => {
   const commentType = new GraphQLObjectType({
     name: "Comment",
     fields: {
-      id: { type: new GraphQLNonNull(GraphQLString), resolve: (value) => value._id?.toString?.() || value.id },
+      id: {
+        type: new GraphQLNonNull(GraphQLString),
+        resolve: (value) => value._id?.toString?.() || value.id,
+      },
       content: { type: GraphQLString },
       postId: { type: GraphQLString },
       createdAt: { type: GraphQLString },
@@ -48,7 +70,10 @@ const bootstrap = async (): Promise<void> => {
   const storyType = new GraphQLObjectType({
     name: "Story",
     fields: {
-      id: { type: new GraphQLNonNull(GraphQLString), resolve: (value) => value._id?.toString?.() || value.id },
+      id: {
+        type: new GraphQLNonNull(GraphQLString),
+        resolve: (value) => value._id?.toString?.() || value.id,
+      },
       content: { type: GraphQLString },
       expiresAt: { type: GraphQLString },
     },
@@ -56,7 +81,10 @@ const bootstrap = async (): Promise<void> => {
   const notificationType = new GraphQLObjectType({
     name: "Notification",
     fields: {
-      id: { type: new GraphQLNonNull(GraphQLString), resolve: (value) => value._id?.toString?.() || value.id },
+      id: {
+        type: new GraphQLNonNull(GraphQLString),
+        resolve: (value) => value._id?.toString?.() || value.id,
+      },
       title: { type: GraphQLString },
       body: { type: GraphQLString },
       audience: { type: GraphQLString },
@@ -66,7 +94,10 @@ const bootstrap = async (): Promise<void> => {
   const userType = new GraphQLObjectType({
     name: "User",
     fields: {
-      id: { type: new GraphQLNonNull(GraphQLString), resolve: (value) => value._id?.toString?.() || value.id },
+      id: {
+        type: new GraphQLNonNull(GraphQLString),
+        resolve: (value) => value._id?.toString?.() || value.id,
+      },
       firstName: { type: GraphQLString },
       lastName: { type: GraphQLString },
       email: { type: GraphQLString },
@@ -86,11 +117,18 @@ const bootstrap = async (): Promise<void> => {
   const queryType = new GraphQLObjectType({
     name: "Query",
     fields: {
-      sayHello: { type: GraphQLString, resolve: () => "Hello from Social Media App" },
+      sayHello: {
+        type: GraphQLString,
+        resolve: () => "Hello from Social Media App",
+      },
       me: { type: userType, resolve: (_, __, context) => context.user ?? null },
       feed: {
         type: postPageType,
-        args: { page: { type: GraphQLInt }, size: { type: GraphQLInt }, search: { type: GraphQLString } },
+        args: {
+          page: { type: GraphQLInt },
+          size: { type: GraphQLInt },
+          search: { type: GraphQLString },
+        },
         resolve: (_, args, context) => postService.postList(args, context.user),
       },
       stories: {
@@ -99,12 +137,14 @@ const bootstrap = async (): Promise<void> => {
       },
       notifications: {
         type: new GraphQLList(notificationType),
-        resolve: (_, __, context) => notificationCrudService.listNotifications(context.user),
+        resolve: (_, __, context) =>
+          notificationCrudService.listNotifications(context.user),
       },
       commentsByPost: {
         type: new GraphQLList(commentType),
         args: { postId: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (_, args, context) => commentService.commentList(args.postId, context.user),
+        resolve: (_, args, context) =>
+          commentService.commentList(args.postId, context.user),
       },
     },
   });
@@ -128,22 +168,34 @@ const bootstrap = async (): Promise<void> => {
       createStory: {
         type: storyType,
         args: { input: { type: new GraphQLNonNull(storyInput) } },
-        resolve: (_, { input }, context) => storyService.createStory(input, context.user),
+        resolve: (_, { input }, context) =>
+          storyService.createStory(input, context.user),
       },
       deleteStory: {
         type: GraphQLBoolean,
         args: { storyId: { type: new GraphQLNonNull(GraphQLString) } },
-        resolve: (_, { storyId }, context) => storyService.deleteStory(storyId, context.user),
+        resolve: (_, { storyId }, context) =>
+          storyService.deleteStory(storyId, context.user),
       },
       createNotification: {
         type: notificationType,
         args: { input: { type: new GraphQLNonNull(notificationInput) } },
-        resolve: (_, { input }, context) => notificationCrudService.createNotification(input, context.user),
+        resolve: (_, { input }, context) =>
+          notificationCrudService.createNotification(input, context.user),
       },
     },
   });
-  const schema = new GraphQLSchema({ query: queryType, mutation: mutationType });
-  app.all("/graphql", createHandler({ schema, context: (req) => ({ user: (req as any).raw?.user ?? (req as any).user }) }));
+  const schema = new GraphQLSchema({
+    query: queryType,
+    mutation: mutationType,
+  });
+  app.all(
+    "/graphql",
+    createHandler({
+      schema,
+      context: (req) => ({ user: (req as any).raw?.user ?? (req as any).user }),
+    }),
+  );
   app.use(express.json(), cors());
   app.get("/", (req: Request, res: Response, next: NextFunction) => {
     res.status(200).json({ message: "Welcome to Social Media App" });

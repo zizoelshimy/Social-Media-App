@@ -23,7 +23,10 @@ router.get(
   validation(validators.notificationParams),
   async (req: Request, res: Response, next: NextFunction) => {
     const { notificationId } = req.params as { notificationId: string };
-    const data = await notificationService.getNotification(notificationId, req.user);
+    const data = await notificationService.getNotification(
+      notificationId,
+      req.user,
+    );
     return successResponse({ res, data });
   },
 );
@@ -34,8 +37,15 @@ router.post(
   authorization([RoleEnum.ADMIN]),
   validation(validators.createNotification),
   async (req: Request, res: Response, next: NextFunction) => {
-    const data = await notificationService.createNotification(req.body, req.user);
-    return successResponse({ res, message: "Notification created successfully", data });
+    const data = await notificationService.createNotification(
+      req.body,
+      req.user,
+    );
+    return successResponse({
+      res,
+      message: "Notification created successfully",
+      data,
+    });
   },
 );
 
@@ -57,7 +67,10 @@ router.delete(
   validation(validators.notificationParams),
   async (req: Request, res: Response, next: NextFunction) => {
     const { notificationId } = req.params as { notificationId: string };
-    const data = await notificationService.deleteNotification(notificationId, req.user);
+    const data = await notificationService.deleteNotification(
+      notificationId,
+      req.user,
+    );
     return successResponse({ res, data });
   },
 );

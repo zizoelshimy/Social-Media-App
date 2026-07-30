@@ -23,7 +23,11 @@ router.post(
   validation(validators.createStory),
   async (req: Request, res: Response, next: NextFunction) => {
     const data = await storyService.createStory(req.body, req.user);
-    return successResponse({ res, message: "Story created successfully", data });
+    return successResponse({
+      res,
+      message: "Story created successfully",
+      data,
+    });
   },
 );
 
@@ -34,7 +38,11 @@ router.delete(
   async (req: Request, res: Response, next: NextFunction) => {
     const { storyId } = req.params as { storyId: string };
     const data = await storyService.deleteStory(storyId, req.user);
-    return successResponse({ res, message: "Story deleted successfully", data });
+    return successResponse({
+      res,
+      message: "Story deleted successfully",
+      data,
+    });
   },
 );
 

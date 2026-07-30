@@ -6,7 +6,10 @@ export const createNotification = {
   body: z.object({
     title: z.string().min(1),
     body: z.string().min(1),
-    audience: z.enum([NotificationAudienceEnum.ALL, NotificationAudienceEnum.USERS]),
+    audience: z.enum([
+      NotificationAudienceEnum.ALL,
+      NotificationAudienceEnum.USERS,
+    ]),
     recipients: z.array(generalValidationFields.id).optional(),
     data: z.record(z.string(), z.string()).optional(),
   }),

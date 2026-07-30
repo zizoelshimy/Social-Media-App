@@ -27,14 +27,17 @@ const notificationSchema = new Schema<INotification>(
   },
 );
 
-notificationSchema.pre(["findOne", "find", "countDocuments"], async function () {
-  const query = this.getQuery();
-  if (query.paranoid === false) {
-    this.setQuery({ ...query });
-    return;
-  }
-  this.setQuery({ ...query, deletedAt: { $exists: false } });
-});
+notificationSchema.pre(
+  ["findOne", "find", "countDocuments"],
+  async function () {
+    const query = this.getQuery();
+    if (query.paranoid === false) {
+      this.setQuery({ ...query });
+      return;
+    }
+    this.setQuery({ ...query, deletedAt: { $exists: false } });
+  },
+);
 
 notificationSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
   const update = this.getUpdate() as HydratedDocument<INotification>;
@@ -46,5 +49,7 @@ notificationSchema.pre(["updateOne", "findOneAndUpdate"], async function () {
   }
 });
 
-export const NotificationModel = models.Notification || model<INotification>("Notification", notificationSchema);
+export const NotificationModel =
+  models.Notification ||
+  model<INotification>("Notification", notificationSchema);
 NotificationModel.syncIndexes();

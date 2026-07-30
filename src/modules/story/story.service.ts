@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 import { HydratedDocument } from "mongoose";
 import { StoryRepository } from "../../DB/repository/story.repository";
 import { IStory, IUser } from "../../common/interfaces";
-import { BadRequestException, NotFoundException } from "../../common/exceptions";
+import {
+  BadRequestException,
+  NotFoundException,
+} from "../../common/exceptions";
 import { realtimeService, S3Service } from "../../common/services";
 import { CreateStoryDto } from "./story.dto";
 
@@ -15,7 +18,10 @@ export class StoryService {
     this.s3Service = new S3Service();
   }
 
-  async createStory(data: CreateStoryDto, user: HydratedDocument<IUser>): Promise<IStory> {
+  async createStory(
+    data: CreateStoryDto,
+    user: HydratedDocument<IUser>,
+  ): Promise<IStory> {
     const folderId = randomUUID();
     const story = await this.storyRepository.createOne({
       data: {
@@ -28,20 +34,30 @@ export class StoryService {
     if (!story) {
       throw new BadRequestException("Failed to create story");
     }
-    realtimeService.emitToUser(user._id.toString(), "story.created", story.toJSON());
+    realtimeService.emitToUser(
+      user._id.toString(),
+      "story.created",
+      story.toJSON(),
+    );
     return story.toJSON();
   }
 
   async storyList(user: HydratedDocument<IUser>) {
     return await this.storyRepository.find({
       filter: {
-        $or: [{ createdBy: user._id }, { createdBy: { $in: user.friends || [] } }],
+        $or: [
+          { createdBy: user._id },
+          { createdBy: { $in: user.friends || [] } },
+        ],
       },
       options: { populate: [{ path: "createdBy" }] },
     });
   }
 
-  async deleteStory(storyId: string, user: HydratedDocument<IUser>): Promise<boolean> {
+  async deleteStory(
+    storyId: string,
+    user: HydratedDocument<IUser>,
+  ): Promise<boolean> {
     const story = await this.storyRepository.findOne({
       filter: { _id: storyId, createdBy: user._id },
     });
@@ -53,7 +69,9 @@ export class StoryService {
       update: { deletedAt: new Date() },
     });
     if (story.attachments?.length) {
-      await this.s3Service.deleteAssets({ Keys: story.attachments.map((key) => ({ Key: key })) });
+      await this.s3Service.deleteAssets({
+        Keys: story.attachments.map((key) => ({ Key: key })),
+      });
     }
     return true;
   }

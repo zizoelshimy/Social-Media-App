@@ -51,7 +51,7 @@ router.patch(
   authentication(TokenTypeEnum.ACCESS),
   async (req: Request, res: Response, next: NextFunction) => {
     const data = await userService.profileImage(req.body, req.user);
-    return successResponse({res,data: data,});
+    return successResponse({ res, data: data });
   },
 );
 
@@ -124,7 +124,7 @@ router.delete(
   authentication(TokenTypeEnum.ACCESS),
   async (req: Request, res: Response, next: NextFunction) => {
     const data = await userService.deleteProfile(req.user);
-    return successResponse({res,data: data});
+    return successResponse({ res, data: data });
   },
 );
 

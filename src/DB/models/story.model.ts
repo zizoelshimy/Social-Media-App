@@ -34,7 +34,11 @@ storySchema.pre(["findOne", "find", "countDocuments"], async function () {
     this.setQuery({ ...query });
     return;
   }
-  this.setQuery({ ...query, deletedAt: { $exists: false }, expiresAt: { $gt: new Date() } });
+  this.setQuery({
+    ...query,
+    deletedAt: { $exists: false },
+    expiresAt: { $gt: new Date() },
+  });
 });
 
 storySchema.pre(["updateOne", "findOneAndUpdate"], async function () {

@@ -1,5 +1,11 @@
 import { HydratedDocument, Types } from "mongoose";
-import { CreatePostBodyDto, ReactPostParamsDto, ReactPostQueryDto, UpdatePostBodyDto, UpdatePostParamsDto } from "./post.dto";
+import {
+  CreatePostBodyDto,
+  ReactPostParamsDto,
+  ReactPostQueryDto,
+  UpdatePostBodyDto,
+  UpdatePostParamsDto,
+} from "./post.dto";
 import { IPaginate, IPost, IUser } from "../../common/interfaces";
 import { PostRepository, UserRepository } from "../../DB/repository";
 import {
@@ -32,7 +38,8 @@ export class PostService {
   }
   async createPost(
     { avalibility, content, files, tags }: CreatePostBodyDto,
-    user: HydratedDocument<IUser>): Promise<IPost> {
+    user: HydratedDocument<IUser>,
+  ): Promise<IPost> {
     const mentions: Types.ObjectId[] = [];
     const FCM_Tokens: string[] = [];
     if (tags?.length) {
@@ -71,11 +78,11 @@ export class PostService {
       },
     });
     if (!post) {
-        if (attachments.length) {
-            await this.s3Service.deleteAssets({
-                Keys: attachments.map((ele) => ({ Key: ele })),
-            })
-        }
+      if (attachments.length) {
+        await this.s3Service.deleteAssets({
+          Keys: attachments.map((ele) => ({ Key: ele })),
+        });
+      }
       throw new BadRequestException("Failed to create post");
     }
     if (FCM_Tokens.length) {
@@ -95,46 +102,67 @@ export class PostService {
   }
 
   async reactPost(
-    {postId}:ReactPostParamsDto,{react, emoji}:ReactPostQueryDto,
-    user: HydratedDocument<IUser>): Promise<IPost> {
+    { postId }: ReactPostParamsDto,
+    { react, emoji }: ReactPostQueryDto,
+    user: HydratedDocument<IUser>,
+  ): Promise<IPost> {
     const post = await this.postRepository.findOne({
-      filter:{
-        _id:postId,
-        $or:getAvailability(user),
+      filter: {
+        _id: postId,
+        $or: getAvailability(user),
       },
-    })
-    if(!post){
-        throw new NotFoundException("Post not found or you don't have access to it")
+    });
+    if (!post) {
+      throw new NotFoundException(
+        "Post not found or you don't have access to it",
+      );
     }
     const reactionEmoji = emoji || (Number(react) > 0 ? "like" : undefined);
-    post.reactions = ((post.reactions || []) as NonNullable<IPost["reactions"]>).filter((reaction) => reaction.user.toString() !== user._id.toString());
-    const likes = ((post.likes || []) as Types.ObjectId[]).filter((liker) => liker.toString() !== user._id.toString());
+    post.reactions = (
+      (post.reactions || []) as NonNullable<IPost["reactions"]>
+    ).filter((reaction) => reaction.user.toString() !== user._id.toString());
+    const likes = ((post.likes || []) as Types.ObjectId[]).filter(
+      (liker) => liker.toString() !== user._id.toString(),
+    );
     if (reactionEmoji) {
-      post.reactions.push({ user: user._id, emoji: reactionEmoji, createdAt: new Date(), updatedAt: new Date() } as never);
+      post.reactions.push({
+        user: user._id,
+        emoji: reactionEmoji,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as never);
       if (reactionEmoji === "like") {
         likes.push(user._id);
       }
     }
     post.likes = likes as never;
     await post.save();
-    realtimeService.emitToPost(post._id.toString(), "post.reacted", post.toJSON());
+    realtimeService.emitToPost(
+      post._id.toString(),
+      "post.reacted",
+      post.toJSON(),
+    );
     return post.toJSON();
   }
 
-
-  async postList({page,size,search}:PaginateDto,
-    user: HydratedDocument<IUser>): Promise<IPaginate<IPost>> {
+  async postList(
+    { page, size, search }: PaginateDto,
+    user: HydratedDocument<IUser>,
+  ): Promise<IPaginate<IPost>> {
     const posts = await this.postRepository.paginate({
-        filter: {
-            $or:getAvailability(user),
-            ...(search?.length?{content:{$regex:search,$options:"i"}}:{})
-        },
-        page,size,
-        options:{
-          populate:[{path:"comments"}]
-        }
-    })
-    return posts
+      filter: {
+        $or: getAvailability(user),
+        ...(search?.length
+          ? { content: { $regex: search, $options: "i" } }
+          : {}),
+      },
+      page,
+      size,
+      options: {
+        populate: [{ path: "comments" }],
+      },
+    });
+    return posts;
   }
 
   async getPost(postId: string, user: HydratedDocument<IUser>): Promise<IPost> {
@@ -143,7 +171,10 @@ export class PostService {
         _id: postId,
         $or: getAvailability(user),
       },
-      options: { populate: [{ path: "comments" }, { path: "createdBy" }], lean: false } as any,
+      options: {
+        populate: [{ path: "comments" }, { path: "createdBy" }],
+        lean: false,
+      } as any,
     });
     if (!post) {
       throw new NotFoundException("Post not found");
@@ -151,7 +182,11 @@ export class PostService {
     return post.toJSON();
   }
 
-  async deletePost(postId: string, user: HydratedDocument<IUser>, hard = false): Promise<boolean> {
+  async deletePost(
+    postId: string,
+    user: HydratedDocument<IUser>,
+    hard = false,
+  ): Promise<boolean> {
     const filter = hard
       ? { _id: postId, createdBy: user._id, force: true }
       : { _id: postId, createdBy: user._id };
@@ -162,31 +197,47 @@ export class PostService {
           update: { deletedAt: new Date() },
         });
     if (!result) {
-      throw new NotFoundException("Post not found or you don't have permission to delete it");
+      throw new NotFoundException(
+        "Post not found or you don't have permission to delete it",
+      );
     }
     return true;
   }
 
-  async restorePost(postId: string, user: HydratedDocument<IUser>): Promise<boolean> {
+  async restorePost(
+    postId: string,
+    user: HydratedDocument<IUser>,
+  ): Promise<boolean> {
     const result = await this.postRepository.findOneAndUpdate({
       filter: { _id: postId, createdBy: user._id },
       update: { restoredAt: new Date() },
     });
     if (!result) {
-      throw new NotFoundException("Post not found or you don't have permission to restore it");
+      throw new NotFoundException(
+        "Post not found or you don't have permission to restore it",
+      );
     }
     return true;
   }
 
-  async dashboardFeed(query: PaginateDto, user: HydratedDocument<IUser>): Promise<IPaginate<IPost>> {
+  async dashboardFeed(
+    query: PaginateDto,
+    user: HydratedDocument<IUser>,
+  ): Promise<IPaginate<IPost>> {
     return await this.postList(query, user);
   }
 
-  async profilePosts(profileUserId: string, query: PaginateDto, user: HydratedDocument<IUser>): Promise<IPaginate<IPost>> {
+  async profilePosts(
+    profileUserId: string,
+    query: PaginateDto,
+    user: HydratedDocument<IUser>,
+  ): Promise<IPaginate<IPost>> {
     const posts = await this.postRepository.paginate({
       filter: {
         createdBy: profileUserId,
-        ...(profileUserId === user._id.toString() ? {} : { availability: { $in: [0, 1] } }),
+        ...(profileUserId === user._id.toString()
+          ? {}
+          : { availability: { $in: [0, 1] } }),
       },
       page: query.page,
       size: query.size,
@@ -195,24 +246,41 @@ export class PostService {
     return posts;
   }
 
-   async updatePost({postId}:UpdatePostParamsDto,
-    { avalibility, content, files, tags=[],removeFiles=[],removeTags=[] }: UpdatePostBodyDto,
-    user: HydratedDocument<IUser>): Promise<IPost> {
-      const post = await this.postRepository.findOne({
-        filter:{
-            _id:postId,
-            createdBy:user._id
-        }
-      })
-       if(!post){
-           throw new NotFoundException("Post not found or you don't have permission to update it")
-        }
-        //this for check that the post is not empty after update because we have a condition in the post model that the post must have content or attachments and if we remove all attachments and not add new content or attachments it will be an invalid post
-        if(!post.content && !files?.length && post.attachments?.length == removeFiles?.length){
-            throw new BadRequestException("we can't update post to have no content and no attachments")
-        }
-    
-      const mentions: Types.ObjectId[] = [];
+  async updatePost(
+    { postId }: UpdatePostParamsDto,
+    {
+      avalibility,
+      content,
+      files,
+      tags = [],
+      removeFiles = [],
+      removeTags = [],
+    }: UpdatePostBodyDto,
+    user: HydratedDocument<IUser>,
+  ): Promise<IPost> {
+    const post = await this.postRepository.findOne({
+      filter: {
+        _id: postId,
+        createdBy: user._id,
+      },
+    });
+    if (!post) {
+      throw new NotFoundException(
+        "Post not found or you don't have permission to update it",
+      );
+    }
+    //this for check that the post is not empty after update because we have a condition in the post model that the post must have content or attachments and if we remove all attachments and not add new content or attachments it will be an invalid post
+    if (
+      !post.content &&
+      !files?.length &&
+      post.attachments?.length == removeFiles?.length
+    ) {
+      throw new BadRequestException(
+        "we can't update post to have no content and no attachments",
+      );
+    }
+
+    const mentions: Types.ObjectId[] = [];
     const FCM_Tokens: string[] = [];
     if (tags?.length) {
       const mentionedAccounts = await this.userRepository.find({
@@ -242,54 +310,53 @@ export class PostService {
     const updatePost = await this.postRepository.findOneAndUpdate({
       filter: {
         _id: postId,
-        createdBy: user._id
+        createdBy: user._id,
       },
       update: [
         {
-          $set:{
-        content: content || post.content,
-        availability: Number(avalibility|| post.availability) ,
-        updatedBy: user._id,
-        attachments:{
-          //this for add new attachments and remove the removed attachments from the post
-          $setUnion:[
-            {
-              $setDifference:[
-                "$attachments",
-                removeFiles
-              ]
+          $set: {
+            content: content || post.content,
+            availability: Number(avalibility || post.availability),
+            updatedBy: user._id,
+            attachments: {
+              //this for add new attachments and remove the removed attachments from the post
+              $setUnion: [
+                {
+                  $setDifference: ["$attachments", removeFiles],
+                },
+                attachments,
+              ],
             },
-            attachments
-          ]
+            tags: {
+              //this for add new tags and remove the removed tags from the post
+              $setUnion: [
+                {
+                  $setDifference: [
+                    "$tags",
+                    removeTags.map((ele) => {
+                      return toObjectId(ele);
+                    }),
+                  ],
+                },
+                mentions,
+              ],
+            },
+          },
         },
-        tags:{
-          //this for add new tags and remove the removed tags from the post
-          $setUnion:[
-            {
-              $setDifference:[
-                "$tags",
-                removeTags.map((ele)=>{return toObjectId(ele)})
-              ]
-            },
-            mentions
-          ]
-        } 
-      }
-        }
       ],
     });
     if (!updatePost) {
-        if (attachments.length) {
-            await this.s3Service.deleteAssets({
-                Keys: attachments.map((ele) => ({ Key: ele })),
-            })
-        }
+      if (attachments.length) {
+        await this.s3Service.deleteAssets({
+          Keys: attachments.map((ele) => ({ Key: ele })),
+        });
+      }
       throw new BadRequestException("Failed to update post");
     }
     if (removeFiles?.length) {
-       await this.s3Service.deleteAssets({
-                Keys: removeFiles.map((ele) => ({ Key: ele })),
-            })
+      await this.s3Service.deleteAssets({
+        Keys: removeFiles.map((ele) => ({ Key: ele })),
+      });
     }
     if (FCM_Tokens.length) {
       await this.notificationService.sendNotifications({
@@ -303,9 +370,12 @@ export class PostService {
         },
       });
     }
-    realtimeService.emitToPost(updatePost._id.toString(), "post.updated", updatePost.toJSON());
+    realtimeService.emitToPost(
+      updatePost._id.toString(),
+      "post.updated",
+      updatePost.toJSON(),
+    );
     return updatePost.toJSON();
   }
-
 }
 export const postService = new PostService();

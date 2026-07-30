@@ -1,8 +1,20 @@
 import { HydratedDocument, Types } from "mongoose";
 import { NotificationRepository } from "../../DB/repository/notification.repository";
-import { INotification, NotificationAudienceEnum, IUser } from "../../common/interfaces";
-import { BadRequestException, NotFoundException, ForbiddenException } from "../../common/exceptions";
-import { NotificationService, realtimeService, RedisService } from "../../common/services";
+import {
+  INotification,
+  NotificationAudienceEnum,
+  IUser,
+} from "../../common/interfaces";
+import {
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+} from "../../common/exceptions";
+import {
+  NotificationService,
+  realtimeService,
+  RedisService,
+} from "../../common/services";
 import redisService from "../../common/services/redis.service";
 import { CreateNotificationDto } from "./notification.dto";
 
@@ -17,11 +29,17 @@ export class AdminNotificationService {
     this.redis = redisService;
   }
 
-  async createNotification(data: CreateNotificationDto, user: HydratedDocument<IUser>): Promise<INotification> {
+  async createNotification(
+    data: CreateNotificationDto,
+    user: HydratedDocument<IUser>,
+  ): Promise<INotification> {
     if (!user || user.role !== 1) {
       throw new ForbiddenException("Only admin can create notifications");
     }
-    const recipients = data.recipients?.map((recipient) => Types.ObjectId.createFromHexString(recipient)) || [];
+    const recipients =
+      data.recipients?.map((recipient) =>
+        Types.ObjectId.createFromHexString(recipient),
+      ) || [];
     const notification = await this.notificationRepository.createOne({
       data: {
         title: data.title,
@@ -42,7 +60,9 @@ export class AdminNotificationService {
     if (recipients.length) {
       const fcmTokens: string[] = [];
       for (const recipient of recipients) {
-        ((await this.redis.getFCMs(recipient)) || []).forEach((token) => fcmTokens.push(token));
+        ((await this.redis.getFCMs(recipient)) || []).forEach((token) =>
+          fcmTokens.push(token),
+        );
       }
       if (fcmTokens.length) {
         await this.pushService.sendNotifications({
@@ -54,9 +74,13 @@ export class AdminNotificationService {
     return notification.toJSON();
   }
 
-  async listNotifications(user: HydratedDocument<IUser>): Promise<INotification[]> {
+  async listNotifications(
+    user: HydratedDocument<IUser>,
+  ): Promise<INotification[]> {
     if (user.role === 1) {
-      return await this.notificationRepository.find({ options: { populate: [{ path: "recipients" }] } });
+      return await this.notificationRepository.find({
+        options: { populate: [{ path: "recipients" }] },
+      });
     }
     return await this.notificationRepository.find({
       filter: {
@@ -68,14 +92,26 @@ export class AdminNotificationService {
     });
   }
 
-  async getNotification(notificationId: string, user: HydratedDocument<IUser>): Promise<INotification> {
-    const notification = await this.notificationRepository.findOne({ filter: { _id: notificationId } });
+  async getNotification(
+    notificationId: string,
+    user: HydratedDocument<IUser>,
+  ): Promise<INotification> {
+    const notification = await this.notificationRepository.findOne({
+      filter: { _id: notificationId },
+    });
     if (!notification) {
       throw new NotFoundException("Notification not found");
     }
-    if (user.role !== 1 && notification.audience !== NotificationAudienceEnum.ALL) {
-      const recipients = notification.recipients as Types.ObjectId[] | undefined;
-      const isRecipient = recipients?.some((recipient) => recipient.toString() === user._id.toString());
+    if (
+      user.role !== 1 &&
+      notification.audience !== NotificationAudienceEnum.ALL
+    ) {
+      const recipients = notification.recipients as
+        | Types.ObjectId[]
+        | undefined;
+      const isRecipient = recipients?.some(
+        (recipient) => recipient.toString() === user._id.toString(),
+      );
       if (!isRecipient) {
         throw new ForbiddenException("Notification not accessible");
       }
@@ -83,7 +119,10 @@ export class AdminNotificationService {
     return notification.toJSON();
   }
 
-  async deleteNotification(notificationId: string, user: HydratedDocument<IUser>): Promise<boolean> {
+  async deleteNotification(
+    notificationId: string,
+    user: HydratedDocument<IUser>,
+  ): Promise<boolean> {
     if (user.role !== 1) {
       throw new ForbiddenException("Only admin can delete notifications");
     }
@@ -97,7 +136,10 @@ export class AdminNotificationService {
     return true;
   }
 
-  async markAsRead(notificationId: string, user: HydratedDocument<IUser>): Promise<boolean> {
+  async markAsRead(
+    notificationId: string,
+    user: HydratedDocument<IUser>,
+  ): Promise<boolean> {
     const result = await this.notificationRepository.findOneAndUpdate({
       filter: { _id: notificationId },
       update: { $addToSet: { readBy: user._id } },

@@ -14,19 +14,29 @@ class UserService {
   private readonly redis: RedisService;
   private tokenService: TokenService;
   private readonly s3: S3Service;
-  private readonly userRepository: UserRepository
+  private readonly userRepository: UserRepository;
   constructor() {
     this.redis = new RedisService();
     this.tokenService = new TokenService();
     this.s3 = new S3Service();
-    this.userRepository = new UserRepository()
+    this.userRepository = new UserRepository();
   }
   async profile(user: HydratedDocument<IUser>): Promise<any> {
     return user.toJSON();
   }
 
   async updateProfile(
-    payload: Partial<Pick<IUser, "firstName" | "lastName" | "phone" | "DOB" | "profilePicture" | "profileCoverPictures">>,
+    payload: Partial<
+      Pick<
+        IUser,
+        | "firstName"
+        | "lastName"
+        | "phone"
+        | "DOB"
+        | "profilePicture"
+        | "profileCoverPictures"
+      >
+    >,
     user: HydratedDocument<IUser>,
   ): Promise<IUser> {
     if (payload.firstName) user.firstName = payload.firstName;
@@ -34,7 +44,8 @@ class UserService {
     if (payload.phone) user.phone = payload.phone;
     if (payload.DOB) user.DOB = payload.DOB;
     if (payload.profilePicture) user.profilePicture = payload.profilePicture;
-    if (payload.profileCoverPictures) user.profileCoverPictures = payload.profileCoverPictures;
+    if (payload.profileCoverPictures)
+      user.profileCoverPictures = payload.profileCoverPictures;
     user.slug = `${user.firstName}-${user.lastName}`.toLowerCase();
     await user.save();
     return user.toJSON();
@@ -52,7 +63,9 @@ class UserService {
     return await postRepository.paginate({
       filter: {
         createdBy: userId,
-        ...(viewer._id.toString() === userId ? {} : { availability: { $in: [0, 1] } }),
+        ...(viewer._id.toString() === userId
+          ? {}
+          : { availability: { $in: [0, 1] } }),
       },
     });
   }
@@ -126,7 +139,7 @@ class UserService {
       Originalname: OriginalName,
       path: `Users/${user._id.toString()}/Profile`,
     });
-   /*  user.profilePicture = key;
+    /*  user.profilePicture = key;
     await user.save();
       if(oldPic){
         await this.s3.deleteAsset({ Key: oldPic })
@@ -138,7 +151,7 @@ class UserService {
     files: Express.Multer.File[],
     user: HydratedDocument<IUser>,
   ): Promise<any> {
-    const oldUrls = user.profileCoverPictures || []
+    const oldUrls = user.profileCoverPictures || [];
     const urls = await this.s3.uploadAssets({
       Bucket: AWS_BUCKET_NAME,
       files,
@@ -148,20 +161,25 @@ class UserService {
     });
     user.profileCoverPictures = urls;
     await user.save();
-    if(oldUrls?.length){
-      await this.s3.deleteAssets({ Keys: oldUrls.map(url=>({Key:url})) })
+    if (oldUrls?.length) {
+      await this.s3.deleteAssets({
+        Keys: oldUrls.map((url) => ({ Key: url })),
+      });
     }
     return user.toJSON();
   }
 
-
-    async deleteProfile(user: HydratedDocument<IUser>,) {
-      const account = await this.userRepository.deleteOne({filter:{_id: user._id,force:true}})
-      if (!account.deletedCount){
-      throw new NotFoundException("account not found")
-      }
-      await this.s3.deleteFolderByPrefix({prefix:`Users/${user._id.toString()}`})
-      return account
+  async deleteProfile(user: HydratedDocument<IUser>) {
+    const account = await this.userRepository.deleteOne({
+      filter: { _id: user._id, force: true },
+    });
+    if (!account.deletedCount) {
+      throw new NotFoundException("account not found");
+    }
+    await this.s3.deleteFolderByPrefix({
+      prefix: `Users/${user._id.toString()}`,
+    });
+    return account;
   }
 }
 export default UserService;
